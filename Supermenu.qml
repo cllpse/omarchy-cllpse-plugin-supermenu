@@ -719,6 +719,9 @@ Item {
     for (var id in root.whenResults) if (root.whenResults[id] === false) hidden++
     return JSON.stringify({
       opened: root.opened,
+      // True once the compositor has handed the card the keyboard, which is
+      // about a frame after it maps -- the gate for anything typing into it.
+      focused: input.activeFocus,
       activeMenu: root.activeMenu,
       query: input.text,
       selectedId: root.selectedRow ? root.selectedRow.id : "",

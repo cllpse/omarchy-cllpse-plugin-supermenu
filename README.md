@@ -156,6 +156,7 @@ Measured inside the shell, on a corpus of 313 entries (55 apps):
 | rebuilding the visible rows | 0.2 ms |
 | rebuilding the index (data changed) | 5–8 ms |
 | `SUPER+SPACE` → card on screen | under 20 ms, including the `hyprctl` that sent it |
+| `SUPER+SPACE` → card has the keyboard | ~30 ms at 60 Hz |
 
 - **The keybind is a global shortcut**, a Wayland event straight into the shell,
   not an IPC call that starts a Quickshell process per keypress.
@@ -174,6 +175,16 @@ measurements on your machine; `stats` reports what the index holds.
 
 ## Notes
 
+- **Keys typed in the first ~30 ms after `SUPER+SPACE` go to the window you
+  were in.** The card is a layer surface created when it opens. Hyprland gives
+  it the keyboard only once it is configured, drawn and mapped, which is two
+  frames at 60 Hz (fewer at a higher refresh rate). Until then the old window
+  still has focus. A first letter typed at human speed lands well after that.
+  Measured with a synthetic typist on this machine, the first ~30 ms of
+  keystrokes went to the previously focused window. Omarchy's own menu opens
+  the same way and has the same gap. A surface kept mapped between opens takes
+  focus in ~10 ms instead (one frame, measured), but holds a full-screen buffer
+  for the whole session and blocks direct scanout, so it is not done here.
 - **Omarchy 4.0.4 never hands a third-party menu its app library.**
   `shell.qml` checks `Array.isArray(manifest.kinds)` on a manifest that has been
   through the panel loader's model, which turns the array into a sequence wrapper

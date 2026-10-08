@@ -75,15 +75,29 @@ engine's component cache keeps serving the old one. Restart the shell.
 
 ## Driving it in tests
 
-Keys injected with `wtype` go to whatever has keyboard focus. Only send one after
-confirming the card is mapped, and confirm the selection over IPC before
-`Enter`, because a misplaced `Enter` runs whatever is selected somewhere else:
+Keys injected with `wtype` go to whatever has keyboard focus, and **a mapped
+card does not have it yet**. Hyprland hands the keyboard over about a frame
+after the surface maps, and ~30 ms after the toggle at 60 Hz. Gating on
+`hyprctl layers` alone let the first two letters of a test query land in the
+terminal the test was running from. Gate on `stats` reporting `focused: true`
+instead, and confirm the selection over IPC before `Enter`, because a misplaced
+`Enter` runs whatever is selected somewhere else:
 
 ```bash
-mapped() { hyprctl layers -j | jq -e '[.. | objects | select(.namespace? == "omarchy-supermenu")] | length > 0' >/dev/null; }
+st() { omarchy-shell shell call cllpse.supermenu stats ""; }
 hyprctl eval 'hl.dispatch(hl.dsp.global("cllpse-supermenu:toggle"))'
-mapped && wtype "sc"
-omarchy-shell shell call cllpse.supermenu stats "" | jq -r .selectedId
+for i in $(seq 50); do [ "$(st | jq -r .focused)" = true ] && break; sleep 0.02; done
+[ "$(st | jq -r .focused)" = true ] && wtype "sc"
+st | jq -r .selectedId
+```
+
+To measure the gap itself, type without waiting into a scratch window that
+records what it receives. Whatever lands there is what a user would have lost:
+
+```bash
+foot --title=probe sh -c 'stty raw -echo; cat > /tmp/leak.txt' &
+# focus it, toggle the supermenu, wtype at once, then compare
+# `stats .query` with /tmp/leak.txt
 ```
 
 Pick submenus to test learning: entering one records a pick and runs nothing.
