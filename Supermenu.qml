@@ -995,7 +995,7 @@ Item {
       // The submenu chevron as measured: its size, and the shift that lines
       // its ink up with a capital's in the item text.
       chevron: { size: root.chevronSize, offset: Math.round(root.chevronOffset * 100) / 100 },
-      // Rows the list shows at rest under its top margin: 10.66 by design.
+      // Rows the list shows at rest under its top margin: 7.75 by design.
       // Meaningful once the card has opened, which picks its screen.
       rowsInView: Math.round((list.height - list.topMargin) / root.rowHeight * 100) / 100,
       pending: root.pendingOpen !== null,
@@ -1084,9 +1084,9 @@ Item {
   // 520 wide: the Omarchy menu's own width for its widest views (screen
   // recording, fonts; Menu.qml's cardWidth), narrower than Raycast's 750.
   // Style.space() scales it with the shell's font size like every other
-  // Omarchy surface. The height is not Raycast's 475 but whatever shows 10.66
-  // rows under the search field: the two-thirds of a row at the foot, under
-  // the bottom scrim, says there is more below. Every row is one height,
+  // Omarchy surface. The height is not Raycast's 475 but whatever shows 7.75
+  // rows under the search field: the three-quarters of a row at the foot,
+  // under the bottom scrim, says there is more below. Every row is one height,
   // section headers included, so that is exact, and it follows rowHeight.
   //
   // Sized from the target screen rather than the panel, which only takes the
@@ -1097,7 +1097,7 @@ Item {
   readonly property int cardWidth: Math.min(Style.space(520), root.screenWidth - Style.gapsOut * 2)
   readonly property int cardHeight: Math.min(
     Math.round(card.contentTopInset + root.searchHeight + Style.spacing.hairline
-      + list.topMargin + root.rowHeight * 10.66 + card.contentBottomInset),
+      + list.topMargin + root.rowHeight * 7.75 + card.contentBottomInset),
     root.screenHeight - Style.gapsOut * 2)
   // The band between the card's border and everything in it, as the window
   // switcher draws its own (switcher-card-padding): the rows' inset from the
