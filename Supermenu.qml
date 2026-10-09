@@ -475,9 +475,6 @@ Item {
   readonly property string placeholder: root.activeMenu === "root"
     ? "Search for apps and commands…"
     : "Search " + root.activeTitle + "…"
-  readonly property string breadcrumb: root.activeMenu === "root"
-    ? "Omarchy"
-    : "Omarchy › " + MenuModel.pathFor(root.items, root.activeMenu)
   readonly property var selectedRow: root.selected >= 0 && root.selected < root.rows.length ? root.rows[root.selected] : null
 
   function show(route, query) {
@@ -646,7 +643,6 @@ Item {
       kind: kind,
       label: candidate.label,
       subtitle: root.relativePath(candidate.subtitle, base),
-      accessory: kind === "app" ? "Application" : (kind === "action" ? "Command" : "Menu"),
       icon: candidate.icon,
       iconFont: candidate.iconFont,
       appIcon: candidate.appIcon,
@@ -722,8 +718,10 @@ Item {
     root.revealSelected()
   }
 
-  // Scrolls just enough to show the selected row, and the header above it when
-  // it is the first of its section.
+  // Scrolls just enough to show the selected row clear of the overflow scrims,
+  // so the next row peeks in faded beyond it, and the header above it when it
+  // is the first of its section. At either end of the list nothing is hidden,
+  // the scrim there is off, and the clamps below keep just the margin.
   //
   // By arithmetic rather than positionViewAtIndex(): every row is one of two
   // fixed heights, so where a row sits is a sum, and it does not depend on the
@@ -742,8 +740,8 @@ Item {
     var top = root.rowY(at > 0 && root.rows[at - 1].type === "header" ? at - 1 : at)
     var bottom = root.rowY(at) + root.rowHeight
     var y = list.contentY
-    if (top - list.topMargin < y) y = top - list.topMargin
-    if (bottom + list.bottomMargin > y + list.height) y = bottom + list.bottomMargin - list.height
+    if (top - root.scrimHeight < y) y = top - root.scrimHeight
+    if (bottom + root.scrimHeight > y + list.height) y = bottom + root.scrimHeight - list.height
     var maxY = Math.max(-list.topMargin, root.rowY(root.rows.length) + list.bottomMargin - list.height)
     list.contentY = Math.max(-list.topMargin, Math.min(y, maxY))
   }
@@ -1033,9 +1031,10 @@ Item {
 
   // ── The card ──────────────────────────────────────────────────────────────
   //
-  // Raycast's layout -- search field on top, one list with section headers,
-  // an action bar along the bottom -- drawn entirely in the Omarchy menu's
-  // theme tokens, so a theme that restyles the Omarchy menu restyles this.
+  // Raycast's layout without its action bar -- search field on top, one list
+  // with section headers running to the card's foot -- drawn entirely in the
+  // Omarchy menu's theme tokens, so a theme that restyles the Omarchy menu
+  // restyles this.
 
   readonly property string fontFamily: Style.font.menuFamily
   readonly property color background: Color.menu.background
@@ -1058,10 +1057,13 @@ Item {
   readonly property int cardWidth: Math.min(Style.space(750), root.screenWidth - Style.gapsOut * 2)
   readonly property int cardHeight: Math.min(Style.space(475), root.screenHeight - Style.gapsOut * 2)
   readonly property int searchHeight: Style.space(56)
-  readonly property int footerHeight: Style.space(40)
   readonly property int listInset: Style.space(8)
   readonly property int rowHeight: Style.space(44)
   readonly property int headerRowHeight: Style.space(32)
+  // The overflow scrims' height, and how far revealSelected() keeps the
+  // selected row from either edge so it is never under one: the list's margin
+  // plus two-thirds of a row, the window switcher's measure.
+  readonly property real scrimHeight: Math.min(list.topMargin + root.rowHeight * 2 / 3, list.height / 2)
   readonly property int iconSize: Style.space(22)
   // Glyph icons at the share of the icon box iconLarge had when the box was
   // 20, so they keep pace with app icons; there is no type token between
@@ -1222,7 +1224,7 @@ Item {
         ListView {
           id: list
           anchors.top: searchRule.bottom
-          anchors.bottom: footerRule.top
+          anchors.bottom: parent.bottom
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.leftMargin: root.listInset
@@ -1368,22 +1370,14 @@ Item {
                 }
 
                 Text {
-                  anchors.verticalCenter: parent.verticalCenter
-                  textFormat: Text.PlainText
-                  text: row.isHeader ? "" : row.modelData.accessory
-                  color: root.muted
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.subtitle
-                }
-
-                Text {
                   visible: row.isMenu
                   anchors.verticalCenter: parent.verticalCenter
                   textFormat: Text.PlainText
                   text: "›"
                   color: root.muted
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.title
+                  // The item text's size, whatever that becomes.
+                  font.pixelSize: titleText.font.pixelSize
                 }
               }
             }
@@ -1429,75 +1423,49 @@ Item {
           }
         }
 
+        // Overflow scrims, as the window switcher draws them and the Omarchy
+        // menu before it (Menu.qml's scroll scrims): the card's own colour
+        // fading out over the list's top and bottom edges. Strength tracks how
+        // much is still hidden past each edge rather than a clock, so a jump
+        // lands with the fade already right, and an edge with nothing beyond
+        // it has none.
+        //
+        // Full width, inner edge to inner edge, so a highlighted row passing
+        // under one fades across its whole width. The height, scrimHeight, is
+        // the list's margin plus two-thirds of a row, the switcher's measure: a
+        // row at the edge sits wholly inside the opaque run, not just under its
+        // tail, and revealSelected() keeps the selection out of it. The
+        // bottom one reaches into the card's rounded corners and takes their
+        // inner radius; its top corners are the transparent end, so rounding
+        // them too costs nothing.
         Rectangle {
-          id: footerRule
-          anchors.bottom: footer.top
+          anchors.top: list.top
           anchors.left: parent.left
           anchors.right: parent.right
-          height: Style.spacing.hairline
-          color: root.hairline
+          height: root.scrimHeight
+          visible: opacity > 0
+          opacity: list.contentHeight > list.height
+            ? Math.max(0, Math.min(1, (list.contentY - list.originY) / height))
+            : 0
+          gradient: Gradient {
+            GradientStop { position: 0; color: root.background }
+            GradientStop { position: 1; color: Util.alpha(root.background, 0) }
+          }
         }
 
-        // ── Action bar ──
-        Item {
-          id: footer
-          anchors.bottom: parent.bottom
+        Rectangle {
+          anchors.bottom: list.bottom
           anchors.left: parent.left
           anchors.right: parent.right
-          height: root.footerHeight
-
-          Text {
-            anchors.left: parent.left
-            anchors.leftMargin: Style.space(18)
-            anchors.right: actionHint.left
-            anchors.rightMargin: Style.space(12)
-            anchors.verticalCenter: parent.verticalCenter
-            textFormat: Text.PlainText
-            text: root.breadcrumb
-            color: root.muted
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.body
-            elide: Text.ElideLeft
-          }
-
-          Row {
-            id: actionHint
-            visible: root.selectedRow !== null
-            anchors.right: parent.right
-            anchors.rightMargin: Style.space(12)
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Style.space(8)
-
-            Text {
-              anchors.verticalCenter: parent.verticalCenter
-              textFormat: Text.PlainText
-              text: !root.selectedRow ? ""
-                : root.selectedRow.kind === "app" ? "Open Application"
-                : root.selectedRow.kind === "action" ? "Run Command"
-                : "Open Menu"
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.body
-              font.weight: Font.Medium
-            }
-
-            Rectangle {
-              anchors.verticalCenter: parent.verticalCenter
-              width: Math.max(height, returnKey.implicitWidth + Style.space(10))
-              height: Style.space(20)
-              radius: Style.space(5)
-              color: Util.alpha(root.foreground, 0.1)
-
-              Text {
-                id: returnKey
-                anchors.centerIn: parent
-                textFormat: Text.PlainText
-                text: "↵"
-                color: root.foreground
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
-              }
-            }
+          height: root.scrimHeight
+          radius: Math.max(0, Style.cornerRadius - card.contentBottomInset)
+          visible: opacity > 0
+          opacity: list.contentHeight > list.height
+            ? Math.max(0, Math.min(1, (list.originY + list.contentHeight - list.height - list.contentY) / height))
+            : 0
+          gradient: Gradient {
+            GradientStop { position: 0; color: Util.alpha(root.background, 0) }
+            GradientStop { position: 1; color: root.background }
           }
         }
       }
