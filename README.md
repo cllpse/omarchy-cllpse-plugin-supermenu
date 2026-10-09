@@ -12,7 +12,9 @@ what you chose last time comes first.
   and a submenu is marked with a chevron.
 - **It learns your queries.** Pick Tailscale after typing `sc` and the next `sc`
   puts Tailscale first, although Screenshot and Screensaver match `sc` better.
-  What you learn for one query stays with that query.
+  What you learn stays with that query and the shorter ones it starts with:
+  the same pick puts Tailscale first for `s` too, at half the weight, until
+  that fades in ten days or so. Other queries are untouched.
 - **It learns what you use.** Frequently used things drift up in every search.
   With nothing typed it shows Omarchy's own menu, in Omarchy's order.
 - **Fuzzy where it helps.** `lw` finds LibreOffice Writer, `vsc` VSCode,
@@ -111,8 +113,10 @@ Three tiers, strongest first:
    three. A pick is remembered against the query you typed and every shorter
    prefix of it, weighted by how much of the query that prefix is: picking
    Tailscale after `tai` teaches `tai` fully, `ta` at two thirds and `t` at one
-   third. A query you habitually stop early on is learned at full weight. A long
-   query does not claim its one-letter prefix after a single use.
+   third. A query you habitually stop early on is learned at full weight. One
+   pick claims a one-letter prefix only from a query of three letters or fewer
+   (`tai` gives `t` a third, over the 0.3 bar); from four letters on it is a
+   quarter or less, under it.
 3. **Everything else that matches**, by match quality plus a small usage term.
    Usage breaks ties and lifts a slightly weaker match. It never lifts the
    middle of a word over a clean prefix; that gap is what tier 2 closes, for
@@ -120,9 +124,10 @@ Three tiers, strongest first:
 
 Every count halves every two weeks, so the order follows what you do now, not
 what you did in the spring. Something used daily settles near 20. Fifty uses
-two months ago count for about 3. Each entry is one number and one timestamp,
-with no log of individual uses, and anything that fades below 0.05 is dropped
-when the file is written.
+two months ago count for about 2.5: sixty days is a little over four
+half-lives, and it takes exactly four, eight weeks, to leave 3. Each entry is
+one number and one timestamp, with no log of individual uses, and anything
+that fades below 0.05 is dropped when the file is written.
 
 **Matching** is fuzzy on the name: the letters must appear in order, and the
 score rewards what makes a match look intended — word starts, camelCase humps,

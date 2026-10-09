@@ -752,11 +752,12 @@ Item {
   // is the first of its section. At either end of the list nothing is hidden,
   // the scrim there is off, and the clamps below keep just the margin.
   //
-  // By arithmetic rather than positionViewAtIndex(): every row is one of two
-  // fixed heights, so where a row sits is a sum, and it does not depend on the
-  // ListView having laid the new rows out yet. It had not, the first time the
-  // card opened with a query, and the first section's header was scrolled out
-  // of view.
+  // By arithmetic rather than positionViewAtIndex(): every row, section headers
+  // included, is one fixed height (headerRowHeight is rowHeight; headers had a
+  // shorter one of their own until they went to the item size), so where a row
+  // sits is a sum, and it does not depend on the ListView having laid the new
+  // rows out yet. It had not, the first time the card opened with a query, and
+  // the first section's header was scrolled out of view.
   function rowY(at) {
     var y = 0
     for (var i = 0; i < at; i++) y += root.rows[i].type === "header" ? root.headerRowHeight : root.rowHeight

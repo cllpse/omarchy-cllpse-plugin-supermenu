@@ -159,9 +159,21 @@ test("a learned pick outranks a better match for that exact query", () => {
   assert.deepStrictEqual(labels(S.search(idx, "sc", usage, "root", NOW)), ["Screenshot", "Tailscale"])
   S.recordPick(usage, "tail", "sc", NOW)
   assert.deepStrictEqual(labels(S.search(idx, "sc", usage, "root", NOW)), ["Tailscale", "Screenshot"])
-  // Learned for "sc" only: "s" got half a pick, below the bar.
-  assert.ok(usage.queries.s.tail[0] < S.LEARNED_MIN * 2)
+  // "s" got half a pick too -- over the bar, so the same pick claims it.
+  // (This said "sc only ... below the bar" and asserted < 2x the bar, which
+  // passed without testing the claim; 0.5 is above LEARNED_MIN.)
+  assert.ok(usage.queries.s.tail[0] >= S.LEARNED_MIN)
+  assert.deepStrictEqual(labels(S.search(idx, "s", usage, "root", NOW))[0], "Tailscale")
   assert.deepStrictEqual(labels(S.search(idx, "ta", usage, "root", NOW))[0], "Tailscale")
+})
+
+test("one pick claims a one-letter prefix from three letters, not four", () => {
+  const usage = S.emptyUsage()
+  S.recordPick(usage, "tail", "tai", NOW)
+  assert.ok(usage.queries.t.tail[0] >= S.LEARNED_MIN)
+  const longer = S.emptyUsage()
+  S.recordPick(longer, "tail", "tail", NOW)
+  assert.ok(longer.queries.t.tail[0] < S.LEARNED_MIN)
 })
 
 test("a learned pick fades below the bar after enough half-lives", () => {

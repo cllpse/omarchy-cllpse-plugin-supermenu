@@ -31,8 +31,10 @@ var PRUNE_BELOW = 0.05
 var QUERY_LIMIT = 2000
 
 // A learned pick needs this much decayed weight to be listed in tier 2. One
-// pick made after typing the whole query weighs 1, and one made after typing
-// three letters more than this query weighs about a third -- see recordPick.
+// pick made after typing the whole query weighs 1; one made after a longer
+// query weighs this query's share of it (length / picked length, see
+// recordPick). So a one-letter query is claimed by one pick after three
+// letters (`tai` -> `t`, a third) but not after four (a quarter).
 var LEARNED_MIN = 0.3
 var LEARNED_MAX = 3
 
