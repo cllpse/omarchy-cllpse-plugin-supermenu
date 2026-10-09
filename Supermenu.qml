@@ -1344,7 +1344,8 @@ Item {
               }
 
               // Raycast's row: the name, then its context in the muted colour
-              // on the same line. The name keeps its full width when it can.
+              // on the same line, on the selected row only. The name keeps its
+              // full width when it can, and the context never moves it.
               Item {
                 id: labels
                 anchors.left: iconSlot.right
@@ -1374,7 +1375,7 @@ Item {
                   anchors.leftMargin: Style.space(8)
                   anchors.baseline: titleText.baseline
                   width: Math.max(0, labels.width - titleText.width - Style.space(8))
-                  visible: width > Style.space(24) && text.length > 0
+                  visible: row.current && width > Style.space(24) && text.length > 0
                   textFormat: Text.PlainText
                   text: row.isHeader ? "" : row.modelData.subtitle
                   color: root.muted
