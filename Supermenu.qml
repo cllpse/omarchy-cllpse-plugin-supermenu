@@ -657,11 +657,6 @@ Item {
     }
   }
 
-  // True while rebuildRows() swaps the rows in: a rebuilt list shows its
-  // selection at once, and only a move of the selection fades. See
-  // selectionFill in the row delegate.
-  property bool rebuilding: false
-
   function rebuildRows(keepSelection) {
     var keepId = keepSelection && root.selectedRow ? root.selectedRow.id : ""
     var next = []
@@ -701,10 +696,8 @@ Item {
       if (keepId && next[i].id === keepId) { nextSelected = i; break }
     }
 
-    root.rebuilding = true
     root.rows = next
     root.selected = nextSelected
-    root.rebuilding = false
     if (!keepId) list.contentY = -list.topMargin
     root.revealSelected()
   }
@@ -1269,37 +1262,15 @@ Item {
               font.weight: Font.Medium
             }
 
-            Item {
+            // The selection is the menu's selected fill and selected-border,
+            // switched rather than faded: a fade between rows was tried
+            // (the switcher's tiles fade theirs) and dropped.
+            BorderSurface {
               visible: !row.isHeader
               anchors.fill: parent
-
-              // The selection, as the window switcher draws its own: the
-              // menu's selected fill and selected-border, faded rather than
-              // switched. The row losing the selection fades out while the one
-              // gaining it fades in, under the pointer and the keyboard alike.
-              // Declared before the content, so it draws beneath it.
-              //
-              // 140ms on OutCubic: Omarchy's own opacity fade for a hovered
-              // widget (WidgetButton.qml), the same both ways, and the
-              // switcher's.
-              //
-              // Only a move fades. A list rebuilt by typing, entering a submenu
-              // or opening the card shows its selection at once
-              // (root.rebuilding), and so does a closed card; a disabled
-              // Behavior also stops a fade still in flight.
-              BorderSurface {
-                id: selectionFill
-                anchors.fill: parent
-                radius: root.rowRadius
-                color: root.selectedBackground
-                borderSpec: root.selectedBorderSpec
-                opacity: row.current ? 1 : 0
-
-                Behavior on opacity {
-                  enabled: root.opened && !root.rebuilding
-                  NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
-                }
-              }
+              radius: root.rowRadius
+              color: row.current ? root.selectedBackground : "transparent"
+              borderSpec: row.current ? root.selectedBorderSpec : Border.none()
 
               Item {
                 id: iconSlot
@@ -1354,12 +1325,10 @@ Item {
                   width: Math.min(implicitWidth, labels.width)
                   textFormat: Text.PlainText
                   text: row.isHeader ? "" : row.modelData.label
-                  // Static, as the switcher's names are. It used to switch to
-                  // selectedText, like a launcher row (Menu.qml:1242), but with
-                  // the fill fading, the colour changed the instant the
-                  // selection moved and the name went blue before the highlight
-                  // arrived. The fill alone marks the selection, and the glyph
-                  // takes this colour too.
+                  // Static, as the switcher's names are: the fill alone marks
+                  // the selection, where a launcher row also switches its text
+                  // to selectedText (Menu.qml:1242). The glyph takes this
+                  // colour too.
                   color: root.foreground
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.title

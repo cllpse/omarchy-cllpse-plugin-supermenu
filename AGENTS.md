@@ -70,13 +70,6 @@ engine's component cache keeps serving the old one. Restart the shell.
 - **The search field's command keys live in `commandKey()`**, shared by the
   field itself and by the replay of caught keys. A new binding goes there, or
   keys typed during the open behave differently from keys typed after it.
-- **Only a move of the selection fades.** Each row's `selectionFill` fades over
-  140 ms, as the window switcher's tiles do, but the rows are rebuilt on every
-  keystroke. `rebuildRows()` swaps rows and selection inside `root.rebuilding`,
-  which disables the fade, so typing never flickers the highlight. Anything
-  else that replaces `rows` or sets `selected` wholesale belongs inside it too.
-  Measured by burst-grimming the rows' backgrounds: `Down` cross-fades in four
-  frames, typing switches in one.
 
 ## Traps already hit
 
