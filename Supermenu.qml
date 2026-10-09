@@ -1081,19 +1081,20 @@ Item {
   readonly property var borderSpec: Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.space(2)))
   readonly property var selectedBorderSpec: Border.surfaceSpec("menu", "selected-border", Color.menu.selectedBorder, 0)
 
-  // Raycast's standard window width, 750; Style.space() scales it with the
-  // shell's font size like every other Omarchy surface. The height is not
-  // Raycast's 475 but whatever shows 10.66 rows under the search field: the
-  // two-thirds of a row at the foot, under the bottom scrim, says there is
-  // more below. Every row is one height, section headers included, so that is
-  // exact, and it follows rowHeight.
+  // 520 wide: the Omarchy menu's own width for its widest views (screen
+  // recording, fonts; Menu.qml's cardWidth), narrower than Raycast's 750.
+  // Style.space() scales it with the shell's font size like every other
+  // Omarchy surface. The height is not Raycast's 475 but whatever shows 10.66
+  // rows under the search field: the two-thirds of a row at the foot, under
+  // the bottom scrim, says there is more below. Every row is one height,
+  // section headers included, so that is exact, and it follows rowHeight.
   //
   // Sized from the target screen rather than the panel, which only takes the
   // screen's size once the compositor configures it -- after the first rows
   // are already laid out against a 500px default.
   readonly property real screenWidth: root.targetScreen ? root.targetScreen.width : panel.width
   readonly property real screenHeight: root.targetScreen ? root.targetScreen.height : panel.height
-  readonly property int cardWidth: Math.min(Style.space(750), root.screenWidth - Style.gapsOut * 2)
+  readonly property int cardWidth: Math.min(Style.space(520), root.screenWidth - Style.gapsOut * 2)
   readonly property int cardHeight: Math.min(
     Math.round(card.contentTopInset + root.searchHeight + Style.spacing.hairline
       + list.topMargin + root.rowHeight * 10.66 + card.contentBottomInset),
