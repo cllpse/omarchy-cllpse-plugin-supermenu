@@ -49,7 +49,8 @@ menu itself is untouched: `SUPER+ALT+SPACE` still opens its apps list, and every
 script that uses it as a pick-from-a-list prompt still does.
 
 Optionally append [`hypr/supermenu-looknfeel.lua`](hypr/supermenu-looknfeel.lua)
-to `~/.config/hypr/looknfeel.lua` for blur and a map fade:
+to `~/.config/hypr/looknfeel.lua` for blur and a map fade, and to spare the
+invisible keystroke catcher a fade on every open:
 
 ```bash
 cat ~/.config/omarchy/plugins/cllpse.supermenu/hypr/supermenu-looknfeel.lua \
@@ -156,7 +157,8 @@ Measured inside the shell, on a corpus of 313 entries (55 apps):
 | rebuilding the visible rows | 0.2 ms |
 | rebuilding the index (data changed) | 5–8 ms |
 | `SUPER+SPACE` → card on screen | under 20 ms, including the `hyprctl` that sent it |
-| `SUPER+SPACE` → card has the keyboard | ~30 ms at 60 Hz |
+| `SUPER+SPACE` → keystrokes held for the card | ~1 ms after the shortcut reaches the shell |
+| `SUPER+SPACE` → card has the keyboard | 20–35 ms at 120 Hz; what was typed before is replayed |
 
 - **The keybind is a global shortcut**, a Wayland event straight into the shell,
   not an IPC call that starts a Quickshell process per keypress.
@@ -175,16 +177,27 @@ measurements on your machine; `stats` reports what the index holds.
 
 ## Notes
 
-- **Keys typed in the first ~30 ms after `SUPER+SPACE` go to the window you
-  were in.** The card is a layer surface created when it opens. Hyprland gives
-  it the keyboard only once it is configured, drawn and mapped, which is two
-  frames at 60 Hz (fewer at a higher refresh rate). Until then the old window
-  still has focus. A first letter typed at human speed lands well after that.
-  Measured with a synthetic typist on this machine, the first ~30 ms of
-  keystrokes went to the previously focused window. Omarchy's own menu opens
-  the same way and has the same gap. A surface kept mapped between opens takes
-  focus in ~10 ms instead (one frame, measured), but holds a full-screen buffer
-  for the whole session and blocks direct scanout, so it is not done here.
+- **Typing straight after `SUPER+SPACE` lands in the search field.** The card
+  is a layer surface created when it opens, and Hyprland gives it the keyboard
+  only once it is configured, drawn and mapped: 20–35 ms after the shortcut at
+  120 Hz. Until then the window you were in still had focus, so a fast first
+  letter used to go there. Omarchy's own menu opens the same way and still
+  does. Here a 1×1 transparent surface, mapped with no keyboard interest,
+  takes the keyboard ~1 ms after the shortcut arrives, before the card exists.
+  It records what is typed, lets go once the card has the keyboard, and the
+  keys are replayed in order: text, Backspace, arrows, `Enter` and `Esc` alike.
+  It lets go by unmapping, so it cannot keep the keyboard after the card
+  closes, and after half a second no matter what. With a synthetic typist
+  firing eight keys at once, nothing reached the window underneath in any
+  trial.
+- **One gap is upstream.** When the window you leave has an input method
+  active (fcitx5, which Omarchy runs for compose keys, serves terminals,
+  browsers and GTK apps), Hyprland routes keys through fcitx5's keyboard grab
+  until fcitx5 releases it. fcitx5 does that as soon as it reads the
+  deactivate, and any keys already queued for the grab are discarded with it.
+  That is ~5 ms after the shortcut, but up to ~30 ms when fcitx5 happens to be
+  busy (4 of 16 synthetic trials lost keys typed that early). A first letter
+  typed at human speed lands after it.
 - **Omarchy 4.0.4 never hands a third-party menu its app library.**
   `shell.qml` checks `Array.isArray(manifest.kinds)` on a manifest that has been
   through the panel loader's model, which turns the array into a sequence wrapper

@@ -25,3 +25,12 @@ hl.layer_rule({
   no_anim = false,
   animation = "fade",
 })
+
+-- The keystroke catcher (omarchy-supermenu-catcher) is a 1x1 transparent
+-- surface, unmapped and made anew on every open. Nothing of it is ever
+-- visible; this spares the compositor a snapshot and a fade for it each time.
+hl.layer_rule({
+  match = { namespace = "^omarchy-supermenu-catcher$" },
+  no_anim = true,
+  animation = "none",
+})

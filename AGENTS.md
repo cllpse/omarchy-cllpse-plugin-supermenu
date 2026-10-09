@@ -57,6 +57,19 @@ engine's component cache keeps serving the old one. Restart the shell.
 - **The card is sized from the target screen**, not the panel, which only takes
   the screen's size after the compositor configures it. The first rows are laid
   out before that, against a 500px default.
+- **The keystroke catcher must never keep the keyboard.** It lets go when the
+  card has the keyboard (`handOver()`), whenever the card closes (`dismiss()`),
+  and after `catchTimeoutMs` regardless. It lets go by **unmapping**, never by
+  switching back to `None`: see the trap below. Anything that adds a way to
+  close the card or abandon an open goes through `dismiss()`.
+- **The card is built after the catcher's frame.** `show()` only arms the
+  catcher; the armed catcher's `frameSwapped` calls `openPending()`, with
+  `cardFallback` as the backstop. Building the card in the same turn as arming
+  put the card's first frame ahead of the catcher's on a cold open, and the
+  card mapped first.
+- **The search field's command keys live in `commandKey()`**, shared by the
+  field itself and by the replay of caught keys. A new binding goes there, or
+  keys typed during the open behave differently from keys typed after it.
 
 ## Traps already hit
 
@@ -72,16 +85,42 @@ engine's component cache keeps serving the old one. Restart the shell.
   `Array.isArray` is false. The plugin falls back to its own `AppLibrary`; see
   the comment on `sharedAppLibrary`. When `stats` reports
   `sharedAppLibrary: true`, the fallback is inert and its comment can go.
+- **Quickshell sends a layer-shell change only with the surface's next
+  frame** (0.3.1: polish sends `set_keyboard_interactivity`, the render thread
+  commits). A surface whose picture does not change may draw no frame, so the
+  change never applies. Arming calls `Window.window.update()` to force one.
+- **Qt drops keys delivered to a window before it activates it**, unless an
+  item there already has `activeFocus`. Activation waits on a `wl_display.sync`
+  round trip, queued behind whatever the GUI thread is doing (the card's first
+  frame: ~20 ms). The catcher's sink calls `forceActiveFocus()` when armed;
+  without it the first four keys of a burst vanished.
+- **Hyprland (0.56.2) hands the keyboard to any exclusive layer still listed.**
+  A layer stays in `m_exclusiveLSes` until a commit setting it to `None` is
+  applied, which needs a frame. When the card unmapped first,
+  `refocusLastWindow()` declined ("exclusive LS present") and `refocus()` fell
+  back to the first listed layer: the invisible catcher kept the keyboard, and
+  typing after an early `Esc` went nowhere. An unmap takes a layer off the list
+  at once, so the catcher is destroyed and made anew instead.
+- **A layer turning `Exclusive` takes the keyboard from a focused one.** The
+  catcher's late commit once stole it from the open card. The ordering
+  invariant above prevents that; unmapping on release would undo it anyway.
+- **fcitx5 discards keys typed during a focus change** (upstream, not fixable
+  here). Leaving a window with an input method active, Hyprland routes keys to
+  fcitx5's keyboard grab until fcitx5 has read the `deactivate` and released
+  it. Keys queued for the grab by then die with it: run fcitx5 under
+  `WAYLAND_DEBUG=client` and they show as `discarded [zombie]#N.[event 1]`. Usually
+  ~5 ms after the shortcut; ~30 ms when fcitx5 is busy, as in 4 of 16 trials.
+  To rule it out, stop `omarchy-fcitx5.service` for a test run.
 
 ## Driving it in tests
 
-Keys injected with `wtype` go to whatever has keyboard focus, and **a mapped
-card does not have it yet**. Hyprland hands the keyboard over about a frame
-after the surface maps, and ~30 ms after the toggle at 60 Hz. Gating on
-`hyprctl layers` alone let the first two letters of a test query land in the
-terminal the test was running from. Gate on `stats` reporting `focused: true`
-instead, and confirm the selection over IPC before `Enter`, because a misplaced
-`Enter` runs whatever is selected somewhere else:
+Keys injected with `wtype` go to whatever has keyboard focus. The catcher
+holds keys typed before the card has the keyboard, but the fcitx5 race above can
+still drop the first ones, and a test should not depend on either. Gate on
+`stats` reporting `focused: true`, which means the card's window is active with
+the search field focused (20–35 ms after the toggle at 120 Hz), and confirm the
+selection over IPC before `Enter`, because a misplaced `Enter` runs whatever is
+selected somewhere else:
 
 ```bash
 st() { omarchy-shell shell call cllpse.supermenu stats ""; }
@@ -91,14 +130,22 @@ for i in $(seq 50); do [ "$(st | jq -r .focused)" = true ] && break; sleep 0.02;
 st | jq -r .selectedId
 ```
 
-To measure the gap itself, type without waiting into a scratch window that
-records what it receives. Whatever lands there is what a user would have lost:
+To test the catcher itself, type without waiting into a scratch window that
+records what it receives. Whatever lands there leaked past the catcher, and
+nothing should:
 
 ```bash
 foot --title=probe sh -c 'stty raw -echo; cat > /tmp/leak.txt' &
-# focus it, toggle the supermenu, wtype at once, then compare
-# `stats .query` with /tmp/leak.txt
+# with the probe focused: toggle, `wtype abcdefgh` at once, then compare
+# `stats .query` with /tmp/leak.txt (a NUL or two there is wtype and foot)
 ```
+
+Check every path that ends with the card closed, too: after it, type into the
+probe again and see it arrive. A catcher that kept the keyboard shows up only
+there, as typing that goes nowhere. The paths are an early `Esc`, `Enter` on an
+app or command, a click outside, a second `SUPER+SPACE` before the card exists
+and one while it is being built. Never type while `omarchy-hyprland-session-locked`
+succeeds: the lock screen has the keyboard, and the probe cannot get focus.
 
 Pick submenus to test learning: entering one records a pick and runs nothing.
 Afterwards delete `~/.local/state/omarchy/cllpse.supermenu.json` and restart the

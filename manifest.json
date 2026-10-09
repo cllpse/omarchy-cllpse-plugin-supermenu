@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "cllpse.supermenu",
   "name": "Supermenu",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "cllpse",
   "license": "MIT",
   "description": "A Raycast-style launcher for the Omarchy menu: one search over your apps and every Omarchy menu entry, ranked by what you actually pick. Typing a query you have used before puts what you chose last time first.",

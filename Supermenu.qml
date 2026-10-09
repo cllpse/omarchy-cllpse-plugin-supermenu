@@ -76,7 +76,7 @@ Item {
   function ping() { return "ok" }
 
   function toggle() {
-    if (root.opened) root.dismiss(true)
+    if (root.opened || root.pendingOpen) root.dismiss(true)
     else root.show("root", "")
   }
 
@@ -490,12 +490,49 @@ Item {
     }
     if (entry && entry.kind === "link" && entry.target) id = entry.target
 
-    root.activeMenu = root.items[id] && id !== "root" ? id : "root"
-    root.navStack = []
     root.targetScreen = root.focusedScreen()
+    var menu = root.items[id] && id !== "root" ? id : "root"
+    var text = String(query || "")
+    // Already up, the card has the keyboard and there is nothing to catch.
+    if (root.opened) {
+      root.openCard(menu, text)
+      return
+    }
+    // The catcher goes first and on its own. Its keyboard request leaves with
+    // its next frame, drawn once this returns to the event loop; building the
+    // card in the same turn put the card's first frame ahead of it (25 ms
+    // late on a cold open, measured) and the card mapped first. The card is
+    // built once the catcher's frame is out.
+    root.pendingOpen = { menu: menu, query: text }
+    if (root.armCatcher()) cardFallback.restart()
+    else root.openPending()
+  }
+
+  // A show() waiting on the catcher's frame: { menu, query }, or null.
+  property var pendingOpen: null
+
+  function openPending() {
+    var pending = root.pendingOpen
+    cardFallback.stop()
+    root.pendingOpen = null
+    if (pending) root.openCard(pending.menu, pending.query)
+  }
+
+  // The catcher has always drawn within a couple of ms (measured); the card
+  // never waits on it for longer than this.
+  Timer {
+    id: cardFallback
+    interval: 30
+    onTriggered: root.openPending()
+  }
+
+  // The card itself: after the catcher's frame, or at once when already up.
+  function openCard(menu, query) {
+    root.activeMenu = menu
+    root.navStack = []
     root.opened = true
     pointerGate.reset()
-    root.setQuery(String(query || ""))
+    root.setQuery(query)
     Qt.callLater(function() { input.forceActiveFocus() })
 
     root.refreshGuardsForOpen()
@@ -510,6 +547,10 @@ Item {
   }
 
   function dismiss(notifyShell) {
+    root.releaseCatcher()
+    root.earlyKeys = []
+    root.pendingOpen = null
+    cardFallback.stop()
     if (!root.opened) return
     root.opened = false
     if (notifyShell && root.shell && typeof root.shell.hide === "function")
@@ -550,6 +591,37 @@ Item {
   function peel() {
     if (input.text.length > 0) root.setQuery("")
     else if (!root.goBack()) root.dismiss(true)
+  }
+
+  // The search field's keys that are not typing. Shared by the field itself and
+  // by the replay of keys the catcher held, so both behave the same.
+  function commandKey(key, modifiers) {
+    var ctrl = (modifiers & Qt.ControlModifier) !== 0
+    if (key === Qt.Key_Escape) {
+      root.peel()
+    } else if (key === Qt.Key_Return || key === Qt.Key_Enter) {
+      root.activate(root.selected)
+    } else if (key === Qt.Key_Down || key === Qt.Key_Tab
+               || (ctrl && (key === Qt.Key_N || key === Qt.Key_J))) {
+      root.move(1)
+    } else if (key === Qt.Key_Up || key === Qt.Key_Backtab
+               || (ctrl && (key === Qt.Key_P || key === Qt.Key_K))) {
+      root.move(-1)
+    } else if (key === Qt.Key_PageDown) {
+      root.move(8)
+    } else if (key === Qt.Key_PageUp) {
+      root.move(-8)
+    } else if (ctrl && key === Qt.Key_U) {
+      root.setQuery("")
+    } else if ((key === Qt.Key_Backspace || key === Qt.Key_Left) && input.text.length === 0) {
+      root.goBack()
+    } else if (key === Qt.Key_Right && input.cursorPosition === input.text.length
+               && root.selectedRow && root.selectedRow.kind !== "app" && root.selectedRow.kind !== "action") {
+      root.activate(root.selected)
+    } else {
+      return false
+    }
+    return true
   }
 
   function header(title) {
@@ -705,6 +777,175 @@ Item {
     return screens.length > 0 ? screens[0] : null
   }
 
+  // ── Keystroke catcher ─────────────────────────────────────────────────────
+  //
+  // The card is a layer surface created on open, and Hyprland hands it the
+  // keyboard only once it is configured, drawn and mapped: 20-35 ms after
+  // the shortcut arrives (measured at 120 Hz). Until then the window you were
+  // in still has the keyboard, so a fast first letter went there instead.
+  //
+  // The catcher closes that gap. It is one 1x1 transparent surface per screen,
+  // mapped with no keyboard interest. On open, the one on the target screen
+  // turns Exclusive, and its request is on the wire ~1 ms after the shortcut
+  // arrives, before the card exists. It records what is typed until the card
+  // holds the keyboard, then lets go, and the keys are replayed into the
+  // search field in the order they were typed.
+  //
+  // What it cannot save: when the window you leave has an input method
+  // active (fcitx5, which Omarchy runs, serves terminals, browsers and GTK
+  // apps), Hyprland keeps routing keys to fcitx5's keyboard grab until fcitx5
+  // has read the deactivate and released it, and keys queued for the grab by
+  // then are discarded with it. That is ~5 ms after the shortcut, or up to
+  // ~30 when fcitx5 is busy (4 of 16 synthetic trials). See AGENTS.md.
+  //
+  // It must never keep the keyboard. It lets go the moment the card has it,
+  // whenever the card closes, and after catchTimeoutMs no matter what. A card
+  // that never appears therefore costs half a second, not a keyboard.
+  //
+  // Its input region is empty, so the pointer passes straight through, and it
+  // sits at the top centre, clear of the window switcher's 1px corner triggers.
+  // Bound to its screen through Variants, like those corners, so a modeset that
+  // drops the output rebuilds it instead of leaving it on a dead one.
+
+  readonly property int catchTimeoutMs: 500
+  property bool catching: false
+  property var earlyKeys: []
+
+  function armCatcher() {
+    if (!root.targetScreen) return false
+    root.earlyKeys = []
+    root.catching = true
+    catchTimeout.restart()
+    return true
+  }
+
+  function releaseCatcher() {
+    root.catching = false
+    catchTimeout.stop()
+  }
+
+  // A key that reached a catcher: queued while the card is on its way. A
+  // released catcher is destroyed at once, so nothing should arrive after,
+  // but a key that does goes straight to an open card rather than nowhere.
+  function catchKey(event) {
+    var k = { key: event.key, text: event.text, modifiers: event.modifiers }
+    if (root.catching) root.earlyKeys = root.earlyKeys.concat([k])
+    else if (root.opened) root.replayKey(k)
+    else return
+    event.accepted = true
+  }
+
+  // The card holds the keyboard: its search field has received a key, or its
+  // window has turned active with the field focused. Qt gives the field
+  // activeFocus before the compositor has moved the keyboard (measured), so
+  // focus alone does not count.
+  function handOver() {
+    if (root.catching) root.releaseCatcher()
+    var keys = root.earlyKeys
+    root.earlyKeys = []
+    for (var i = 0; i < keys.length && root.opened; i++) root.replayKey(keys[i])
+  }
+
+  function cardHasKeyboard() {
+    if (input.activeFocus && input.Window.active) root.handOver()
+  }
+
+  // A caught key, as the search field would have taken it. Enter and Esc can
+  // close the card, and whatever follows them then has nowhere to go.
+  function replayKey(k) {
+    if (root.commandKey(k.key, k.modifiers)) return
+    if (k.key === Qt.Key_Backspace) {
+      if (input.cursorPosition > 0) input.remove(input.cursorPosition - 1, input.cursorPosition)
+    } else if (root.isTypedText(k)) {
+      input.insert(input.cursorPosition, k.text)
+    }
+  }
+
+  // What TextInput itself accepts as typing: printable text, unless Ctrl is
+  // held (Ctrl+Alt is AltGr on some layouts and stays text).
+  function isTypedText(k) {
+    if (!k.text || k.text.length === 0) return false
+    var mods = k.modifiers & (Qt.ControlModifier | Qt.ShiftModifier | Qt.AltModifier | Qt.MetaModifier)
+    if (mods === Qt.ControlModifier || mods === (Qt.ControlModifier | Qt.ShiftModifier)) return false
+    var c = k.text.charCodeAt(0)
+    return c >= 32 && c !== 127 && (c < 0x80 || c > 0x9f)
+  }
+
+  Timer {
+    id: catchTimeout
+    interval: root.catchTimeoutMs
+    onTriggered: root.releaseCatcher()
+  }
+
+  Variants {
+    model: Quickshell.screens
+
+    PanelWindow {
+      id: catcher
+      required property var modelData
+      readonly property bool armed: root.catching && root.targetScreen === catcher.modelData
+      // False for one turn after the catcher lets go: see onArmedChanged.
+      property bool present: true
+
+      screen: modelData
+      visible: catcher.present
+      anchors.top: true
+      implicitWidth: 1
+      implicitHeight: 1
+      color: "transparent"
+      mask: Region {}
+      exclusionMode: ExclusionMode.Ignore
+      WlrLayershell.namespace: "omarchy-supermenu-catcher"
+      WlrLayershell.layer: WlrLayer.Overlay
+      WlrLayershell.keyboardFocus: catcher.armed ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+      // Arming: Quickshell sends a layer change with the surface's next frame,
+      // and a surface whose picture never changes may not draw one, so ask for
+      // it. The sink takes focus now, not when Qt activates the window: that
+      // waits on a round trip queued behind the card's first frame, and keys
+      // delivered before it had no item to go to (measured: the first four of
+      // a burst, gone).
+      //
+      // Letting go: the surface is destroyed, not set back to None. A None
+      // change needs another frame to reach Hyprland, and until it does
+      // Hyprland still lists the catcher as an exclusive layer. With one
+      // listed, closing the card hands the keyboard to it: refocusLastWindow
+      // declines while any exclusive layer is listed, and refocus() falls
+      // back to the first one (Hyprland 0.56.2, InputManager.cpp; measured:
+      // typing after an early Esc went nowhere). An unmap takes it off the
+      // list at once. A new, inert catcher replaces it on the next turn.
+      onArmedChanged: {
+        if (catcher.armed) {
+          sink.forceActiveFocus()
+          if (sink.Window.window) sink.Window.window.update()
+        } else {
+          catcher.present = false
+          Qt.callLater(catcher.reappear)
+        }
+      }
+
+      function reappear() {
+        catcher.present = true
+      }
+
+      Item {
+        id: sink
+        anchors.fill: parent
+        focus: true
+
+        // The armed catcher's frame is out, and with it the keyboard request:
+        // the card can follow.
+        Connections {
+          target: sink.Window.window
+          function onFrameSwapped() {
+            if (catcher.armed) root.openPending()
+          }
+        }
+        Keys.onPressed: function(event) { root.catchKey(event) }
+      }
+    }
+  }
+
   // ── Inspection ────────────────────────────────────────────────────────────
   //
   //   omarchy-shell shell call cllpse.supermenu stats ""
@@ -721,7 +962,10 @@ Item {
       opened: root.opened,
       // True once the compositor has handed the card the keyboard, which is
       // about a frame after it maps -- the gate for anything typing into it.
-      focused: input.activeFocus,
+      // activeFocus alone turns true ~20 ms earlier (measured).
+      focused: input.activeFocus && input.Window.active,
+      catching: root.catching,
+      pending: root.pendingOpen !== null,
       activeMenu: root.activeMenu,
       query: input.text,
       selectedId: root.selectedRow ? root.selectedRow.id : "",
@@ -922,35 +1166,22 @@ Item {
             font.pixelSize: Math.round(Style.font.heading * 1.2)
 
             onTextChanged: root.rebuildRows(false)
+            onActiveFocusChanged: root.cardHasKeyboard()
+            Window.onActiveChanged: root.cardHasKeyboard()
 
             Keys.priority: Keys.BeforeItem
             Keys.onPressed: function(event) {
-              var ctrl = (event.modifiers & Qt.ControlModifier) !== 0
-              if (event.key === Qt.Key_Escape) {
-                root.peel()
-              } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                root.activate(root.selected)
-              } else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab
-                         || (ctrl && (event.key === Qt.Key_N || event.key === Qt.Key_J))) {
-                root.move(1)
-              } else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab
-                         || (ctrl && (event.key === Qt.Key_P || event.key === Qt.Key_K))) {
-                root.move(-1)
-              } else if (event.key === Qt.Key_PageDown) {
-                root.move(8)
-              } else if (event.key === Qt.Key_PageUp) {
-                root.move(-8)
-              } else if (ctrl && event.key === Qt.Key_U) {
-                root.setQuery("")
-              } else if ((event.key === Qt.Key_Backspace || event.key === Qt.Key_Left) && input.text.length === 0) {
-                root.goBack()
-              } else if (event.key === Qt.Key_Right && input.cursorPosition === input.text.length
-                         && root.selectedRow && root.selectedRow.kind !== "app" && root.selectedRow.kind !== "action") {
-                root.activate(root.selected)
-              } else {
-                return
+              // A key can arrive before Qt reports the window active. It
+              // proves the card has the keyboard all the same, and whatever
+              // the catcher held goes in first.
+              if (root.catching || root.earlyKeys.length > 0) {
+                root.handOver()
+                if (!root.opened) {
+                  event.accepted = true
+                  return
+                }
               }
-              event.accepted = true
+              if (root.commandKey(event.key, event.modifiers)) event.accepted = true
             }
 
             Text {
