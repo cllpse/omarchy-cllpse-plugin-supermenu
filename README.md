@@ -51,8 +51,10 @@ menu itself is untouched: `SUPER+ALT+SPACE` still opens its apps list, and every
 script that uses it as a pick-from-a-list prompt still does.
 
 Optionally append [`hypr/supermenu-looknfeel.lua`](hypr/supermenu-looknfeel.lua)
-to `~/.config/hypr/looknfeel.lua` for blur and a map fade, and to spare the
-invisible keystroke catcher a fade on every open:
+to `~/.config/hypr/looknfeel.lua` for a map fade, and to spare the invisible
+keystroke catcher a fade on every open. Its blur rule is in there commented
+out: blur on a full-screen layer halved the frame rate (measured on the window
+switcher), and an opaque card has nothing to blur through:
 
 ```bash
 cat ~/.config/omarchy/plugins/cllpse.supermenu/hypr/supermenu-looknfeel.lua \
@@ -126,7 +128,8 @@ when the file is written.
 score rewards what makes a match look intended — word starts, camelCase humps,
 runs of consecutive letters, an early first letter — with fzf's own constants.
 Aliases, an app's generic name and keywords, the row's menu path and its
-description are matched as word prefixes, at a discount. Space-separated terms
+description are matched as word prefixes, at a discount; aliases and keywords
+also mid-word from three letters, at a larger one. Space-separated terms
 must each match somewhere, so `lo w` is LibreOffice Writer.
 
 The history lives in `~/.local/state/omarchy/cllpse.supermenu.json`. Delete it
