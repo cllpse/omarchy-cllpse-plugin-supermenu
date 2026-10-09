@@ -707,21 +707,9 @@ Item {
       var results = Search.search(index, normalized, root.usage, root.activeMenu, now)
       if (results.length > 0) next.push(root.header("Results"))
       for (i = 0; i < results.length; i++) next.push(root.itemRow(results[i].candidate, base))
-    } else if (index && root.activeMenu === "root") {
-      // The empty root is Raycast's: what you use most, then the menu itself.
-      var suggested = Search.suggestions(index, root.usage, now)
-      var shown = ({})
-      if (suggested.length > 0) next.push(root.header("Suggestions"))
-      for (i = 0; i < suggested.length; i++) {
-        next.push(root.itemRow(suggested[i].candidate, base))
-        shown[suggested[i].candidate.id] = true
-      }
-      var top = Search.children(index, "root")
-      var commands = []
-      for (i = 0; i < top.length; i++) if (!shown[top[i].id]) commands.push(top[i])
-      if (commands.length > 0) next.push(root.header("Commands"))
-      for (i = 0; i < commands.length; i++) next.push(root.itemRow(commands[i], base))
     } else if (index) {
+      // Nothing typed: the menu you are in, in Omarchy's order, the root
+      // included. Usage only ranks what you type.
       var own = Search.children(index, root.activeMenu)
       for (i = 0; i < own.length; i++) next.push(root.itemRow(own[i], base))
     }

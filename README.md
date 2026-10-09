@@ -13,8 +13,8 @@ what you chose last time comes first.
 - **It learns your queries.** Pick Tailscale after typing `sc` and the next `sc`
   puts Tailscale first, although Screenshot and Screensaver match `sc` better.
   What you learn for one query stays with that query.
-- **It learns what you use.** Frequently used things drift up everywhere, and the
-  empty search opens on your most-used ones, Raycast's *Suggestions*.
+- **It learns what you use.** Frequently used things drift up in every search.
+  With nothing typed it shows Omarchy's own menu, in Omarchy's order.
 - **Fuzzy where it helps.** `lw` finds LibreOffice Writer, `vsc` VSCode,
   `setup dns` the DNS entry under Setup.
 - **Omarchy's data, Omarchy's look.** It reads the same menu files, runs the

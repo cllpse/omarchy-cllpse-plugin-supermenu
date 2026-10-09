@@ -43,10 +43,6 @@ var LEARNED_MAX = 3
 var USAGE_WEIGHT = 8
 
 var RESULT_LIMIT = 50
-var SUGGESTION_LIMIT = 5
-// Two uses in the last two weeks, or one very recent, before something is
-// offered as a suggestion on the empty search.
-var SUGGESTION_MIN = 1.5
 
 function normalizeQuery(query) {
   return String(query || "").toLowerCase().replace(/\s+/g, " ").replace(/^ | $/g, "")
@@ -614,26 +610,6 @@ function compareRows(a, b) {
   return a.candidate.order - b.candidate.order
 }
 
-// The most-used things, for the empty search at the root.
-function suggestions(index, usage, now, limit) {
-  var items = (usage && usage.items) || {}
-  var rows = []
-  for (var id in items) {
-    var candidate = index.byId[id]
-    if (!candidate) continue
-    var score = decayed(items[id], now)
-    if (score < SUGGESTION_MIN) continue
-    rows.push({ candidate: candidate, usage: score })
-  }
-  rows.sort(function(a, b) {
-    if (a.usage !== b.usage) return b.usage - a.usage
-    return a.candidate.order - b.candidate.order
-  })
-  if (limit === undefined) limit = SUGGESTION_LIMIT
-  if (rows.length > limit) rows.length = limit
-  return rows
-}
-
 // A submenu's own rows, for browsing it with nothing typed: Omarchy's order,
 // except the apps list, which Omarchy keeps alphabetical.
 function children(index, menuId) {
@@ -658,7 +634,6 @@ if (typeof module !== "undefined") {
     LEARNED_MIN: LEARNED_MIN,
     LEARNED_MAX: LEARNED_MAX,
     USAGE_WEIGHT: USAGE_WEIGHT,
-    SUGGESTION_MIN: SUGGESTION_MIN,
     NEG: NEG,
     normalizeQuery: normalizeQuery,
     emptyUsage: emptyUsage,
@@ -676,7 +651,6 @@ if (typeof module !== "undefined") {
     makeCandidate: makeCandidate,
     makeIndex: makeIndex,
     search: search,
-    suggestions: suggestions,
     children: children
   }
 }

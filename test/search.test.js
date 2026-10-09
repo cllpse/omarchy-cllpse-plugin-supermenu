@@ -216,16 +216,6 @@ test("an unreadable usage file is an empty history", () => {
   assert.deepStrictEqual(S.parseUsage(""), S.emptyUsage())
 })
 
-test("suggestions are the most-used things above the bar", () => {
-  const list = [candidate("a", "A"), candidate("b", "B"), candidate("c", "C")]
-  const usage = S.emptyUsage()
-  for (let i = 0; i < 5; i++) S.recordPick(usage, "b", "", NOW)
-  for (let i = 0; i < 2; i++) S.recordPick(usage, "a", "", NOW)
-  S.recordPick(usage, "c", "", NOW)
-  S.recordPick(usage, "gone", "", NOW)
-  assert.deepStrictEqual(S.suggestions(index(list), usage, NOW).map((r) => r.candidate.id), ["b", "a"])
-})
-
 // ── candidates from Omarchy's data ─────────────────────────────────────────
 
 const menuJsonc = `{
