@@ -50,10 +50,13 @@ engine's component cache keeps serving the old one. Restart the shell.
   grep -A4 '"fonts": {\|"power-profiles": {' /usr/share/omarchy/shell/plugins/menu/Menu.qml
   ```
 
-- **Rows are positioned by arithmetic, not `positionViewAtIndex()`.** Every row
-  is one of two fixed heights, so `rowY()` is a sum. The ListView's own
-  positioning read a stale layout on the first open with a query, and scrolled
-  the first header out of view. A third row height means updating `rowY()`.
+- **Rows are positioned by arithmetic, not `positionViewAtIndex()`.** Every row,
+  section headers included, is one fixed height (`headerRowHeight` is
+  `rowHeight`), so `rowY()` is a sum. The ListView's own positioning read a stale
+  layout on the first open with a query, and scrolled the first header out of
+  view. A header height of its own means updating `rowY()` again, and the card
+  height, which is computed to show exactly 10.5 rows (`stats` reports
+  `rowsInView`).
 - **The card is sized from the target screen**, not the panel, which only takes
   the screen's size after the compositor configures it. The first rows are laid
   out before that, against a 500px default.

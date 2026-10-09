@@ -963,6 +963,9 @@ Item {
       // activeFocus alone turns true ~20 ms earlier (measured).
       focused: input.activeFocus && input.Window.active,
       catching: root.catching,
+      // Rows the list shows at rest under its top margin: 10.5 by design.
+      // Meaningful once the card has opened, which picks its screen.
+      rowsInView: Math.round((list.height - list.topMargin) / root.rowHeight * 100) / 100,
       pending: root.pendingOpen !== null,
       activeMenu: root.activeMenu,
       query: input.text,
@@ -1046,8 +1049,12 @@ Item {
   readonly property var borderSpec: Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.space(2)))
   readonly property var selectedBorderSpec: Border.surfaceSpec("menu", "selected-border", Color.menu.selectedBorder, 0)
 
-  // Raycast's standard window is 750 x 475; Style.space() scales it with the
-  // shell's font size like every other Omarchy surface.
+  // Raycast's standard window width, 750; Style.space() scales it with the
+  // shell's font size like every other Omarchy surface. The height is not
+  // Raycast's 475 but whatever shows ten and a half rows under the search
+  // field: the half row at the foot, under the bottom scrim, says there is
+  // more below. Every row is one height, section headers included, so that is
+  // exact, and it follows rowHeight.
   //
   // Sized from the target screen rather than the panel, which only takes the
   // screen's size once the compositor configures it -- after the first rows
@@ -1055,11 +1062,15 @@ Item {
   readonly property real screenWidth: root.targetScreen ? root.targetScreen.width : panel.width
   readonly property real screenHeight: root.targetScreen ? root.targetScreen.height : panel.height
   readonly property int cardWidth: Math.min(Style.space(750), root.screenWidth - Style.gapsOut * 2)
-  readonly property int cardHeight: Math.min(Style.space(475), root.screenHeight - Style.gapsOut * 2)
+  readonly property int cardHeight: Math.min(
+    Math.round(card.contentTopInset + root.searchHeight + Style.spacing.hairline
+      + list.topMargin + root.rowHeight * 10.5 + card.contentBottomInset),
+    root.screenHeight - Style.gapsOut * 2)
   readonly property int searchHeight: Style.space(56)
   readonly property int listInset: Style.space(8)
   readonly property int rowHeight: Style.space(44)
-  readonly property int headerRowHeight: Style.space(32)
+  // A section header is a row like any other, at the item text's size.
+  readonly property int headerRowHeight: root.rowHeight
   // The overflow scrims' height, and how far revealSelected() keeps the
   // selected row from either edge so it is never under one: the list's margin
   // plus two-thirds of a row, the window switcher's measure.
@@ -1254,13 +1265,13 @@ Item {
               visible: row.isHeader
               anchors.left: parent.left
               anchors.leftMargin: Style.space(10)
-              anchors.bottom: parent.bottom
-              anchors.bottomMargin: Style.space(6)
+              anchors.verticalCenter: parent.verticalCenter
               textFormat: Text.PlainText
               text: row.isHeader ? row.modelData.title : ""
               color: root.muted
               font.family: root.fontFamily
-              font.pixelSize: Style.font.body
+              // The item text's size, as the chevrons are.
+              font.pixelSize: titleText.font.pixelSize
               font.weight: Font.Medium
             }
 
