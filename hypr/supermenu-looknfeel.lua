@@ -11,8 +11,9 @@ hl.layer_rule({
   match = { namespace = "^omarchy-supermenu$" },
   blur = true,
   blur_popups = true,
-  -- The scrim sits below this, so it renders sharp; only a translucent card
-  -- (a theme's menu background-alpha below 1) frosts.
+  -- Around the card the surface is transparent, or with Supermenu.qml's
+  -- backdrop on, the scrim, which sits below this and renders sharp. Only a
+  -- translucent card (a theme's menu background-alpha below 1) frosts.
   ignore_alpha = 0.6,
 })
 

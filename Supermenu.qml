@@ -1067,6 +1067,12 @@ Item {
   // card's, so its radius is the card's less that inset.
   readonly property int rowRadius: Math.max(Style.space(4), Style.cornerRadius - root.listInset)
 
+  // No backdrop: like Raycast, the card floats over the desktop as it is. True
+  // dims the screen behind it in the menu's scrim colour, the way the Omarchy
+  // menu opens. Either way a click outside the card closes it, and does not
+  // reach the window behind.
+  readonly property bool backdrop: false
+
   PointerMoveGate {
     id: pointerGate
     referenceItem: card
@@ -1085,6 +1091,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
+      visible: root.backdrop
       color: Color.menu.scrim
     }
 
