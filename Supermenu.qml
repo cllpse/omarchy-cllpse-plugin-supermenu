@@ -1251,7 +1251,6 @@ Item {
             readonly property bool current: !row.isHeader && row.index === root.selected
             readonly property bool isApp: row.modelData.kind === "app"
             readonly property bool isMenu: row.modelData.kind === "menu" || row.modelData.kind === "link"
-            readonly property color ink: row.current ? root.selectedText : root.foreground
 
             width: ListView.view.width
             height: row.isHeader ? root.headerRowHeight : root.rowHeight
@@ -1331,7 +1330,9 @@ Item {
                   // A row without a glyph of its own still gets one, so the
                   // names line up down the list.
                   text: row.modelData.icon || (row.isMenu ? "" : "")
-                  color: row.ink
+                  // The name's colour, selected or not, so a row's glyph and
+                  // name read as one item. App icons keep their own colours.
+                  color: root.foreground
                   font.family: row.modelData.iconFont || root.fontFamily
                   font.pixelSize: root.glyphSize
                 }
@@ -1357,8 +1358,8 @@ Item {
                   // selectedText, like a launcher row (Menu.qml:1242), but with
                   // the fill fading, the colour changed the instant the
                   // selection moved and the name went blue before the highlight
-                  // arrived. The fill alone marks the selection; the glyph
-                  // keeps its tint, as the switcher's does.
+                  // arrived. The fill alone marks the selection, and the glyph
+                  // takes this colour too.
                   color: root.foreground
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.title
