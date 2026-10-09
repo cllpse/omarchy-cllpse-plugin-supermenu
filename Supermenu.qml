@@ -1004,6 +1004,9 @@ Item {
       // activeFocus alone turns true ~20 ms earlier (measured).
       focused: input.activeFocus && input.Window.active,
       catching: root.catching,
+      // The submenu chevron as measured: its size, and the shift that lines
+      // its ink up with a capital's in the item text.
+      chevron: { size: root.chevronSize, offset: Math.round(root.chevronOffset * 100) / 100 },
       // Rows the list shows at rest under its top margin: 10.66 by design.
       // Meaningful once the card has opened, which picks its screen.
       rowsInView: Math.round((list.height - list.topMargin) / root.rowHeight * 100) / 100,
@@ -1134,6 +1137,40 @@ Item {
   // 20, so they keep pace with app icons; there is no type token between
   // iconLarge and display.
   readonly property int glyphSize: Math.round(root.iconSize * 0.9)
+
+  // The item text's size: the names, their context, section headers.
+  readonly property int itemTextSize: Style.font.title
+
+  // The submenu chevron, as tall as a capital in the item text. "›" sits
+  // below the x-height in SF Pro (83 against H's 141 at 200pt), so at the item
+  // size it read a size small, and scaled up to match, its stroke went heavy.
+  // The codicon chevron (U+EAB6, in every Nerd Font) is drawn thin, near the
+  // text's own weight. Sized and centred by measurement, so its ink matches a
+  // capital's height and middle in whatever the menu font is.
+  readonly property string chevronGlyph: "\ueab6"
+  readonly property int chevronSize: chevronInk.tightBoundingRect.height > 0
+    ? Math.round(root.itemTextSize * capInk.tightBoundingRect.height / chevronInk.tightBoundingRect.height)
+    : root.itemTextSize
+  // The name and the chevron are each centred in the row by their line
+  // boxes; this moves the chevron so the middles of their inks line up.
+  readonly property real chevronOffset:
+    root.inkMiddle(capInk.tightBoundingRect, referenceMetrics) * root.itemTextSize / root.metricsReference
+    - root.inkMiddle(chevronInk.tightBoundingRect, referenceMetrics) * root.chevronSize / root.metricsReference
+
+  // How far a glyph's ink middle sits below its line box's middle. Ink
+  // rects are measured from the baseline, and the box runs ascent above it to
+  // descent below.
+  function inkMiddle(ink, metrics) {
+    return ink.y + ink.height / 2 - (metrics.descent - metrics.ascent) / 2
+  }
+
+  // Measured at a large reference size and scaled. At the item size itself
+  // hinting snaps both inks to whole pixels: 11 and 11 at 15px, where the
+  // chevron is 0.89 of a capital.
+  readonly property int metricsReference: 100
+  FontMetrics { id: referenceMetrics; font.family: root.fontFamily; font.pixelSize: root.metricsReference }
+  TextMetrics { id: capInk; font: referenceMetrics.font; text: "H" }
+  TextMetrics { id: chevronInk; font: referenceMetrics.font; text: root.chevronGlyph }
   // Concentric with the card, as the switcher's highlight is: the card's
   // radius less the row's distance in from its edge (border plus padding), so
   // the two curves run parallel. 18 - (2 + 7) = 9 at text size 13. Padding at
@@ -1332,8 +1369,7 @@ Item {
               text: row.isHeader ? row.modelData.title : ""
               color: root.muted
               font.family: root.fontFamily
-              // The item text's size, as the chevrons are.
-              font.pixelSize: titleText.font.pixelSize
+              font.pixelSize: root.itemTextSize
               font.weight: Font.Medium
             }
 
@@ -1407,7 +1443,7 @@ Item {
                   // colour too.
                   color: root.foreground
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.title
+                  font.pixelSize: root.itemTextSize
                   elide: Text.ElideRight
                 }
 
@@ -1421,7 +1457,7 @@ Item {
                   text: row.isHeader ? "" : row.modelData.subtitle
                   color: root.muted
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.title
+                  font.pixelSize: root.itemTextSize
                   elide: Text.ElideRight
                 }
               }
@@ -1446,12 +1482,13 @@ Item {
                 Text {
                   visible: row.isMenu
                   anchors.verticalCenter: parent.verticalCenter
+                  anchors.verticalCenterOffset: root.chevronOffset
                   textFormat: Text.PlainText
-                  text: "›"
+                  text: root.chevronGlyph
                   color: root.muted
                   font.family: root.fontFamily
-                  // The item text's size, whatever that becomes.
-                  font.pixelSize: titleText.font.pixelSize
+                  // As tall as a capital in the name beside it: chevronSize.
+                  font.pixelSize: root.chevronSize
                 }
               }
             }

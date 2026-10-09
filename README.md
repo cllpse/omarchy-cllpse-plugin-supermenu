@@ -9,7 +9,7 @@ what you chose last time comes first.
 
 - **Everything in one list.** Apps, Omarchy's commands and its submenus are
   searched together. The selected row shows where it lives (`Setup › Network`),
-  and a submenu is marked with a `›`.
+  and a submenu is marked with a chevron.
 - **It learns your queries.** Pick Tailscale after typing `sc` and the next `sc`
   puts Tailscale first, although Screenshot and Screensaver match `sc` better.
   What you learn for one query stays with that query.
