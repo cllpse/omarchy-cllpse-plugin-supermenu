@@ -93,6 +93,47 @@ Item {
     onPressed: root.toggle()
   }
 
+  // ── One overlay at a time ─────────────────────────────────────────────────
+  //
+  // Opening announces itself on Hyprland's event socket, and any other overlay
+  // that is open when the announcement arrives closes. The last one opened
+  // wins. The window switcher (cllpse.window-switcher) does the same, so
+  // SUPER+TAB or a screen corner over the card cancels the card, and
+  // SUPER+SPACE over the strip cancels the strip. Neither plugin names the
+  // other: each sends its own id and closes on any id that is not its own, so
+  // a third overlay joins by doing the same two things.
+  //
+  // The channel is Hyprland's own: hl.dsp.event(data) puts `custom>>data` on
+  // socket2 for every client, and Hyprland.rawEvent hands this process every
+  // line of it (name "custom", data after the first `>>`). The event is
+  //
+  //   custom>>overlay-open>><plugin id>
+  //
+  // and `hyprctl dispatch 'hl.dsp.event("overlay-open>>x")'` closes the card
+  // from a shell.
+  //
+  // Sent when the card opens, not when show() arms the catcher. An
+  // announcement that lands while the catcher is armed still cancels the
+  // open: dismiss() releases the catcher and drops pendingOpen. That is the
+  // same test toggle() uses for "up". If both open inside one round trip, each
+  // sees the other's announcement and both close. Neither stays open over the
+  // other.
+  onOpenedChanged: {
+    if (root.opened)
+      Hyprland.dispatch('hl.dsp.event("overlay-open>>' + root.pluginId + '")')
+  }
+
+  Connections {
+    target: Hyprland
+    function onRawEvent(event) {
+      if (event.name !== "custom") return
+      var data = String(event.data)
+      if (!data.startsWith("overlay-open>>")) return
+      if (data.slice("overlay-open>>".length) === root.pluginId) return
+      if (root.opened || root.pendingOpen) root.dismiss(true)
+    }
+  }
+
   // ── Omarchy's menu ────────────────────────────────────────────────────────
   //
   // The same two JSONC files the Omarchy menu reads, watched the same way, and

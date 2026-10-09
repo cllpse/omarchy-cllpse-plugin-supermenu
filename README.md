@@ -223,6 +223,14 @@ less the distance from the card's edge in to the rows (border plus
   scan (~155 ms), in the background at shell start and when apps change. Once
   the shell's own library arrives the plugin uses it instead, and `stats` shows
   `sharedAppLibrary: true`.
+- **One overlay at a time.** Opening the card sends
+  `custom>>overlay-open>>cllpse.supermenu` on Hyprland's event socket
+  (`hl.dsp.event`), and the card closes when another overlay sends the same
+  event with its own id. The last one opened wins. The
+  [Window Switcher](https://github.com/cllpse/omarchy-cllpse-plugin-switcher)
+  does this too, so `SUPER+TAB` over the card cancels it. Neither plugin names
+  the other. To close the card from a shell:
+  `hyprctl dispatch 'hl.dsp.event("overlay-open>>x")'`.
 - `MenuModel.js` is imported from `/usr/share/omarchy/shell/plugins/menu/`. QML
   imports are static, so an Omarchy installed anywhere else needs that one line
   changed.

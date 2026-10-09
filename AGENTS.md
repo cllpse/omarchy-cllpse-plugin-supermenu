@@ -71,6 +71,13 @@ engine's component cache keeps serving the old one. Restart the shell.
   and after `catchTimeoutMs` regardless. It lets go by **unmapping**, never by
   switching back to `None`: see the trap below. Anything that adds a way to
   close the card or abandon an open goes through `dismiss()`.
+- **One overlay at a time, through Hyprland's event socket.** `opened` turning
+  true sends `hl.dsp.event("overlay-open>><pluginId>")`. A `custom` raw event
+  carrying any other id closes the card through `dismiss(true)`, while it is
+  open or while the catcher is armed. The window switcher does the same, and
+  nothing here names it. Keep the event exactly `overlay-open>><id>`: the
+  switcher matches it as written. Probe: with the card open,
+  `hyprctl dispatch 'hl.dsp.event("overlay-open>>x")'` must close it.
 - **The card is built after the catcher's frame.** `show()` only arms the
   catcher; the armed catcher's `frameSwapped` calls `openPending()`, with
   `cardFallback` as the backstop. Building the card in the same turn as arming
