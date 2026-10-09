@@ -57,6 +57,12 @@ engine's component cache keeps serving the old one. Restart the shell.
   view. A header height of its own means updating `rowY()` again, and the card
   height, which is computed to show exactly 10.66 rows (`stats` reports
   `rowsInView`).
+- **One padding, one column.** `root.padding` (`supermenu-card-padding`) is the
+  band between the border and everything in the card, as the switcher's
+  `switcher-card-padding` is, and `rowRadius` is concentric from it. Inside a
+  row, `rowPaddingX` starts the icon column and ends the chevron; the search
+  text and the back button sit on the same columns as the rows. A new inset
+  should come from these, not a fresh `Style.space()` literal.
 - **The card is sized from the target screen**, not the panel, which only takes
   the screen's size after the compositor configures it. The first rows are laid
   out before that, against a 500px default.

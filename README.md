@@ -177,6 +177,21 @@ Measured inside the shell, on a corpus of 313 entries (55 apps):
 `omarchy-shell shell call cllpse.supermenu bench ""` reruns the first three
 measurements on your machine; `stats` reports what the index holds.
 
+## Theming
+
+The card binds the active theme's menu colours and Hyprland's
+`decoration:rounding`, so it tracks your theme with nothing to configure. One
+size can be pinned from a theme's `[spacing]` section, as the window switcher's
+are:
+
+| token | default | what it sets |
+|---|---|---|
+| `supermenu-card-padding` | 6 | space between the card's border and its contents: the rows' side inset, the list's top and bottom margins, the space above the search field |
+
+The selected row's corner is concentric with the card's: Hyprland's rounding,
+less the distance from the card's edge in to the rows (border plus
+`supermenu-card-padding`). Padding at or past the rounding gives square rows.
+
 ## Notes
 
 - **Typing straight after `SUPER+SPACE` lands in the search field.** The card

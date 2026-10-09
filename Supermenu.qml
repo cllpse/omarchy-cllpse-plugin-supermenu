@@ -1066,8 +1066,21 @@ Item {
     Math.round(card.contentTopInset + root.searchHeight + Style.spacing.hairline
       + list.topMargin + root.rowHeight * 10.66 + card.contentBottomInset),
     root.screenHeight - Style.gapsOut * 2)
-  readonly property int searchHeight: Style.space(56)
-  readonly property int listInset: Style.space(8)
+  // The band between the card's border and everything in it, as the window
+  // switcher draws its own (switcher-card-padding): the rows' inset from the
+  // border, the list's top and bottom margins, and the space above the search
+  // field. Small enough to stay under the card's corner, so the rows' corner
+  // can be concentric with it (rowRadius). A theme can pin it in [spacing].
+  readonly property int padding: Style.spacingToken("supermenu-card-padding", 6)
+  // The search field is a row of its own, one padding in from the border, as
+  // the list's rows sit one padding below the rule under it.
+  readonly property int searchHeight: root.padding + root.rowHeight
+  readonly property int listInset: root.padding
+  // A row's own horizontal padding: where the icon column starts, where a
+  // section header's text starts, where the chevron ends. The search field's
+  // text and its back button line up on the same column.
+  readonly property int rowPaddingX: Style.space(10)
+  readonly property int iconSlotWidth: Style.space(26)
   readonly property int rowHeight: Style.space(44)
   // A section header is a row like any other, at the item text's size.
   readonly property int headerRowHeight: root.rowHeight
@@ -1080,9 +1093,11 @@ Item {
   // 20, so they keep pace with app icons; there is no type token between
   // iconLarge and display.
   readonly property int glyphSize: Math.round(root.iconSize * 0.9)
-  // Concentric with the card: the row's corner sits listInset inside the
-  // card's, so its radius is the card's less that inset.
-  readonly property int rowRadius: Math.max(Style.space(4), Style.cornerRadius - root.listInset)
+  // Concentric with the card, as the switcher's highlight is: the card's
+  // radius less the row's distance in from its edge (border plus padding), so
+  // the two curves run parallel. 18 - (2 + 7) = 9 at text size 13. Padding at
+  // or past the rounding gives a square row.
+  readonly property int rowRadius: Math.max(0, Style.cornerRadius - card.contentLeftInset - root.listInset)
 
   // No backdrop: like Raycast, the card floats over the desktop as it is. True
   // dims the screen behind it in the menu's scrim colour, the way the Omarchy
@@ -1149,9 +1164,12 @@ Item {
             id: backButton
             visible: root.activeMenu !== "root"
             anchors.left: parent.left
-            anchors.leftMargin: Style.space(14)
+            anchors.leftMargin: root.listInset + root.rowPaddingX
+            // Centred in the row-height band below the padding, as a row's
+            // contents are.
             anchors.verticalCenter: parent.verticalCenter
-            width: Style.space(26)
+            anchors.verticalCenterOffset: root.padding / 2
+            width: root.iconSlotWidth
             height: width
             radius: Style.space(6)
             color: backMouse.containsMouse ? Util.alpha(root.foreground, 0.16) : Util.alpha(root.foreground, 0.08)
@@ -1176,11 +1194,14 @@ Item {
 
           TextInput {
             id: input
+            // On the rows' icon column, or after the back button on their
+            // name column.
             anchors.left: backButton.visible ? backButton.right : parent.left
-            anchors.leftMargin: backButton.visible ? Style.space(10) : Style.space(18)
+            anchors.leftMargin: backButton.visible ? root.rowPaddingX : root.listInset + root.rowPaddingX
             anchors.right: parent.right
-            anchors.rightMargin: Style.space(18)
+            anchors.rightMargin: root.listInset + root.rowPaddingX
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: root.padding / 2
             focus: true
             clip: true
             color: root.foreground
@@ -1240,8 +1261,8 @@ Item {
           anchors.right: parent.right
           anchors.leftMargin: root.listInset
           anchors.rightMargin: root.listInset
-          topMargin: Style.space(6)
-          bottomMargin: Style.space(6)
+          topMargin: root.padding
+          bottomMargin: root.padding
           clip: true
           model: root.rows
           reuseItems: true
@@ -1264,7 +1285,7 @@ Item {
             Text {
               visible: row.isHeader
               anchors.left: parent.left
-              anchors.leftMargin: Style.space(10)
+              anchors.leftMargin: root.rowPaddingX
               anchors.verticalCenter: parent.verticalCenter
               textFormat: Text.PlainText
               text: row.isHeader ? row.modelData.title : ""
@@ -1288,9 +1309,9 @@ Item {
               Item {
                 id: iconSlot
                 anchors.left: parent.left
-                anchors.leftMargin: Style.space(10)
+                anchors.leftMargin: root.rowPaddingX
                 anchors.verticalCenter: parent.verticalCenter
-                width: Style.space(26)
+                width: root.iconSlotWidth
                 height: width
 
                 Image {
@@ -1327,7 +1348,7 @@ Item {
               Item {
                 id: labels
                 anchors.left: iconSlot.right
-                anchors.leftMargin: Style.space(10)
+                anchors.leftMargin: root.rowPaddingX
                 anchors.right: accessories.left
                 anchors.rightMargin: Style.space(12)
                 anchors.verticalCenter: parent.verticalCenter
@@ -1366,7 +1387,7 @@ Item {
               Row {
                 id: accessories
                 anchors.right: parent.right
-                anchors.rightMargin: Style.space(12)
+                anchors.rightMargin: root.rowPaddingX
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: Style.space(8)
 
