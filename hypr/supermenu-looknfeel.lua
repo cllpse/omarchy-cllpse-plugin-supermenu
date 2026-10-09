@@ -1,21 +1,33 @@
 -- Supermenu (cllpse.supermenu) -- appearance. OPTIONAL.
 --
 -- Append to ~/.config/hypr/looknfeel.lua. Without it the supermenu still works;
--- it just will not blur or fade the way Omarchy's own panels do.
+-- it just will not fade the way Omarchy's own panels do.
 --
--- Omarchy blurs its own panels through a layer rule matching a fixed list of
--- namespaces, which a third-party namespace cannot join. These rules put the
--- supermenu in the same company. A later layer rule wins over an earlier one,
--- so this needs no edit to any Omarchy file.
-hl.layer_rule({
-  match = { namespace = "^omarchy-supermenu$" },
-  blur = true,
-  blur_popups = true,
-  -- Around the card the surface is transparent, or with Supermenu.qml's
-  -- backdrop on, the scrim, which sits below this and renders sharp. Only a
-  -- translucent card (a theme's menu background-alpha below 1) frosts.
-  ignore_alpha = 0.6,
-})
+-- A later layer rule wins over an earlier one, so this needs no edit to any
+-- Omarchy file.
+
+-- Blur is deliberately NOT applied, though Omarchy blurs its own panels.
+--
+-- The supermenu is a full-screen layer, and blurring one costs the compositor a
+-- full-screen blur on every frame that changes -- every frame of the open and
+-- close fade, and of anything animating on the card. Measured on the window
+-- switcher, the same kind of surface, with Qt's render-loop timing on a 120Hz
+-- output: frames every 16-17ms (60 fps) in a blur rule, every 8ms (120 fps)
+-- out of it, Qt itself rendering in ~0ms either way. And it buys nothing while
+-- the card is opaque, as it is under Omarchy's own menu colours: an opaque
+-- pixel has nothing to blur through, and the transparent rest is under
+-- ignore_alpha.
+--
+-- If your theme makes the menu translucent and you want the card frosted,
+-- uncomment this, knowing the frame rate is the price. With Supermenu.qml's
+-- backdrop on, the scrim sits under ignore_alpha and stays sharp.
+--
+-- hl.layer_rule({
+--   match = { namespace = "^omarchy-supermenu$" },
+--   blur = true,
+--   blur_popups = true,
+--   ignore_alpha = 0.6,
+-- })
 
 -- Omarchy opts its keyboard-driven panels out of the compositor's map fade, so
 -- they snap in. A third-party namespace is not in that list and fades by
