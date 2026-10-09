@@ -55,7 +55,7 @@ engine's component cache keeps serving the old one. Restart the shell.
   `rowHeight`), so `rowY()` is a sum. The ListView's own positioning read a stale
   layout on the first open with a query, and scrolled the first header out of
   view. A header height of its own means updating `rowY()` again, and the card
-  height, which is computed to show exactly 10.5 rows (`stats` reports
+  height, which is computed to show exactly 10.66 rows (`stats` reports
   `rowsInView`).
 - **The card is sized from the target screen**, not the panel, which only takes
   the screen's size after the compositor configures it. The first rows are laid

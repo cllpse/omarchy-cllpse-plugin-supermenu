@@ -963,7 +963,7 @@ Item {
       // activeFocus alone turns true ~20 ms earlier (measured).
       focused: input.activeFocus && input.Window.active,
       catching: root.catching,
-      // Rows the list shows at rest under its top margin: 10.5 by design.
+      // Rows the list shows at rest under its top margin: 10.66 by design.
       // Meaningful once the card has opened, which picks its screen.
       rowsInView: Math.round((list.height - list.topMargin) / root.rowHeight * 100) / 100,
       pending: root.pendingOpen !== null,
@@ -1051,8 +1051,8 @@ Item {
 
   // Raycast's standard window width, 750; Style.space() scales it with the
   // shell's font size like every other Omarchy surface. The height is not
-  // Raycast's 475 but whatever shows ten and a half rows under the search
-  // field: the half row at the foot, under the bottom scrim, says there is
+  // Raycast's 475 but whatever shows 10.66 rows under the search field: the
+  // two-thirds of a row at the foot, under the bottom scrim, says there is
   // more below. Every row is one height, section headers included, so that is
   // exact, and it follows rowHeight.
   //
@@ -1064,7 +1064,7 @@ Item {
   readonly property int cardWidth: Math.min(Style.space(750), root.screenWidth - Style.gapsOut * 2)
   readonly property int cardHeight: Math.min(
     Math.round(card.contentTopInset + root.searchHeight + Style.spacing.hairline
-      + list.topMargin + root.rowHeight * 10.5 + card.contentBottomInset),
+      + list.topMargin + root.rowHeight * 10.66 + card.contentBottomInset),
     root.screenHeight - Style.gapsOut * 2)
   readonly property int searchHeight: Style.space(56)
   readonly property int listInset: Style.space(8)
