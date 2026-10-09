@@ -1060,9 +1060,13 @@ Item {
   readonly property int searchHeight: Style.space(56)
   readonly property int footerHeight: Style.space(40)
   readonly property int listInset: Style.space(8)
-  readonly property int rowHeight: Style.space(40)
-  readonly property int headerRowHeight: Style.space(30)
-  readonly property int iconSize: Style.space(20)
+  readonly property int rowHeight: Style.space(44)
+  readonly property int headerRowHeight: Style.space(32)
+  readonly property int iconSize: Style.space(22)
+  // Glyph icons at the share of the icon box iconLarge had when the box was
+  // 20, so they keep pace with app icons; there is no type token between
+  // iconLarge and display.
+  readonly property int glyphSize: Math.round(root.iconSize * 0.9)
   // Concentric with the card: the row's corner sits listInset inside the
   // card's, so its radius is the card's less that inset.
   readonly property int rowRadius: Math.max(Style.space(4), Style.cornerRadius - root.listInset)
@@ -1170,7 +1174,8 @@ Item {
             selectionColor: Util.alpha(root.selectedText, 0.35)
             selectedTextColor: root.foreground
             font.family: root.fontFamily
-            font.pixelSize: Math.round(Style.font.heading * 1.2)
+            // The switcher's app names and the Omarchy launcher's labels.
+            font.pixelSize: Style.font.heading
 
             onTextChanged: root.rebuildRows(false)
             onActiveFocusChanged: root.cardHasKeyboard()
@@ -1254,7 +1259,7 @@ Item {
               text: row.isHeader ? row.modelData.title : ""
               color: root.muted
               font.family: root.fontFamily
-              font.pixelSize: Style.font.bodySmall
+              font.pixelSize: Style.font.body
               font.weight: Font.Medium
             }
 
@@ -1270,7 +1275,7 @@ Item {
                 anchors.left: parent.left
                 anchors.leftMargin: Style.space(10)
                 anchors.verticalCenter: parent.verticalCenter
-                width: Style.space(24)
+                width: Style.space(26)
                 height: width
 
                 Image {
@@ -1296,7 +1301,7 @@ Item {
                   text: row.modelData.icon || (row.isMenu ? "" : "")
                   color: row.ink
                   font.family: row.modelData.iconFont || root.fontFamily
-                  font.pixelSize: Style.font.iconLarge
+                  font.pixelSize: root.glyphSize
                 }
               }
 
@@ -1318,7 +1323,7 @@ Item {
                   text: row.isHeader ? "" : row.modelData.label
                   color: row.ink
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.subtitle
+                  font.pixelSize: Style.font.title
                   elide: Text.ElideRight
                 }
 
@@ -1332,7 +1337,7 @@ Item {
                   text: row.isHeader ? "" : row.modelData.subtitle
                   color: root.muted
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.subtitle
+                  font.pixelSize: Style.font.title
                   elide: Text.ElideRight
                 }
               }
@@ -1351,7 +1356,7 @@ Item {
                   text: "✓"
                   color: root.selectedText
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
+                  font.pixelSize: Style.font.subtitle
                 }
 
                 Text {
@@ -1360,7 +1365,7 @@ Item {
                   text: row.isHeader ? "" : row.modelData.accessory
                   color: root.muted
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
+                  font.pixelSize: Style.font.subtitle
                 }
 
                 Text {
@@ -1370,7 +1375,7 @@ Item {
                   text: "›"
                   color: root.muted
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.subtitle
+                  font.pixelSize: Style.font.title
                 }
               }
             }
