@@ -760,7 +760,7 @@ Item {
   // the first section's header was scrolled out of view.
   function rowY(at) {
     var y = 0
-    for (var i = 0; i < at; i++) y += root.rows[i].type === "header" ? root.headerRowHeight : root.rowHeight
+    for (var i = 0; i < at; i++) y += (root.rows[i].type === "header" ? root.headerRowHeight : root.rowHeight) + root.rowGap
     return y
   }
 
@@ -772,7 +772,9 @@ Item {
     var y = list.contentY
     if (top - root.scrimHeight < y) y = top - root.scrimHeight
     if (bottom + root.scrimHeight > y + list.height) y = bottom + root.scrimHeight - list.height
-    var maxY = Math.max(-list.topMargin, root.rowY(root.rows.length) + list.bottomMargin - list.height)
+    // rowY(length) counts a gap after the last row too; the list has none.
+    var contentHeight = root.rows.length > 0 ? root.rowY(root.rows.length) - root.rowGap : 0
+    var maxY = Math.max(-list.topMargin, contentHeight + list.bottomMargin - list.height)
     list.contentY = Math.max(-list.topMargin, Math.min(y, maxY))
   }
 
@@ -998,7 +1000,7 @@ Item {
       chevron: { size: root.chevronSize, offset: Math.round(root.chevronOffset * 100) / 100 },
       // Rows the list shows at rest under its top margin: 7.75 by design.
       // Meaningful once the card has opened, which picks its screen.
-      rowsInView: Math.round((list.height - list.topMargin) / root.rowHeight * 100) / 100,
+      rowsInView: Math.round((list.height - list.topMargin) / (root.rowHeight + root.rowGap) * 100) / 100,
       pending: root.pendingOpen !== null,
       activeMenu: root.activeMenu,
       query: input.text,
@@ -1076,7 +1078,6 @@ Item {
   readonly property color background: Color.menu.background
   readonly property color foreground: Color.menu.text
   readonly property color muted: Util.alpha(Color.menu.text, 0.5)
-  readonly property color hairline: Util.alpha(Color.menu.text, 0.1)
   readonly property color selectedBackground: Color.menu.selectedBackground
   readonly property color selectedText: Color.menu.selectedText
   readonly property var borderSpec: Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.space(2)))
@@ -1097,8 +1098,8 @@ Item {
   readonly property real screenHeight: root.targetScreen ? root.targetScreen.height : panel.height
   readonly property int cardWidth: Math.min(Style.space(520), root.screenWidth - Style.gapsOut * 2)
   readonly property int cardHeight: Math.min(
-    Math.round(card.contentTopInset + root.searchHeight + Style.spacing.hairline
-      + list.topMargin + root.rowHeight * 7.75 + card.contentBottomInset),
+    Math.round(card.contentTopInset + root.searchHeight + root.ruleHeight
+      + list.topMargin + (root.rowHeight + root.rowGap) * 7.75 + card.contentBottomInset),
     root.screenHeight - Style.gapsOut * 2)
   // The band between the card's border and everything in it, as the window
   // switcher draws its own (switcher-card-padding): the rows' inset from the
@@ -1106,16 +1107,50 @@ Item {
   // field. Small enough to stay under the card's corner, so the rows' corner
   // can be concentric with it (rowRadius). A theme can pin it in [spacing].
   readonly property int padding: Style.spacingToken("supermenu-card-padding", 6)
-  // The search field is a row of its own, one padding in from the border, as
-  // the list's rows sit one padding below the rule under it.
-  readonly property int searchHeight: root.padding + root.rowHeight
+  // The search field is a row of its own, below a band of searchTopPadding
+  // from the border. That band is two units under the card's padding
+  // (2026-10-11, set by eye): at the full padding, the field read as sitting
+  // low against the rule under it.
+  readonly property int searchTopPadding: Math.max(0, root.padding - Style.space(2))
+  readonly property int searchHeight: root.searchTopPadding + root.rowHeight
+  // The rule under the search field, drawn as the window switcher draws the
+  // rules between its workspace groups (2026-10-11): 3x the theme's border
+  // width, snapped to whole device pixels at the monitor's scale, in the menu's
+  // selected-background colour, border to border. It was a one-unit hairline
+  // at 10% of the text colour, which read thinner and greyer than the switcher.
+  readonly property real ruleStroke: Math.max(1, Style.normalBorderWidth) * 3
+  readonly property real outputScale: {
+    var m = Hyprland.focusedMonitor
+    var s = m ? Number(m.scale) : 1
+    return isFinite(s) && s > 0 ? s : 1
+  }
+  readonly property real ruleHeight: Math.round(root.ruleStroke * root.outputScale) / root.outputScale
   readonly property int listInset: root.padding
-  // A row's own horizontal padding: where the icon column starts, where a
-  // section header's text starts, where the chevron ends. The search field's
-  // text and its back button line up on the same column.
-  readonly property int rowPaddingX: Style.space(10)
-  readonly property int iconSlotWidth: Style.space(26)
-  readonly property int rowHeight: Style.space(44)
+  // Inside and between the rows, the window switcher's spacing, token for
+  // token (2026-10-11). These were separate literals (10, 12, 8, a 26 icon
+  // slot around a 22 icon), so no two gaps in a row matched.
+  //   rowGap       between rows: Style.spacing.xs, the switcher's tile gap.
+  //   rowPaddingX  a row's own horizontal padding: where the icon column and
+  //                a section header's text start, where the chevron ends. The
+  //                switcher's padding inside a tile, Style.spacing.rowPaddingX.
+  //                The search field's text and back button sit on the same
+  //                column.
+  //   innerGap     between things in a row: icon to name, name to context,
+  //                text to the accessories, and the search text after the back
+  //                button. The switcher's icon-to-name gap, Style.spacing.lg.
+  // The icon slot is the icon itself, so no padding hides inside it, and a row
+  // is the icon with innerGap above and below: 42 at text size 13, against 48
+  // as Style.space(44).
+  readonly property int rowGap: Style.spacing.xs
+  readonly property int rowPaddingX: Style.spacing.rowPaddingX
+  readonly property int innerGap: Style.spacing.lg
+  readonly property int iconSlotWidth: root.iconSize
+  // The icon sits this much left of the row's padding, and the name this much
+  // further from it, so only the icon moves (2026-10-11, set by eye): icons
+  // draw inside their box with a margin of their own, so on the padding alone
+  // they read as further in than the chevron at the other end.
+  readonly property int iconNudge: Style.space(2)
+  readonly property int rowHeight: root.iconSize + root.innerGap * 2
   // A section header is a row like any other, at the item text's size.
   readonly property int headerRowHeight: root.rowHeight
   // The overflow scrims' height, and how far revealSelected() keeps the
@@ -1236,7 +1271,7 @@ Item {
             // Centred in the row-height band below the padding, as a row's
             // contents are.
             anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: root.padding / 2
+            anchors.verticalCenterOffset: root.searchTopPadding / 2
             width: root.iconSlotWidth
             height: width
             radius: Style.space(6)
@@ -1265,20 +1300,21 @@ Item {
             // On the rows' icon column, or after the back button on their
             // name column.
             anchors.left: backButton.visible ? backButton.right : parent.left
-            anchors.leftMargin: backButton.visible ? root.rowPaddingX : root.listInset + root.rowPaddingX
+            anchors.leftMargin: backButton.visible ? root.innerGap : root.listInset + root.rowPaddingX
             anchors.right: parent.right
             anchors.rightMargin: root.listInset + root.rowPaddingX
             anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: root.padding / 2
+            anchors.verticalCenterOffset: root.searchTopPadding / 2
             focus: true
             clip: true
             color: root.foreground
             selectionColor: Util.alpha(root.selectedText, 0.35)
             selectedTextColor: root.foreground
             font.family: root.fontFamily
-            // The Omarchy launcher's labels. The rows below, and the switcher's
-            // names and titles, are a step smaller: itemTextSize (title).
-            font.pixelSize: Style.font.heading
+            // The item size, as the rows below and the switcher's names are
+            // (2026-10-11). It was heading, the Omarchy launcher's label size,
+            // a step above everything else in the card.
+            font.pixelSize: root.itemTextSize
 
             onTextChanged: root.rebuildRows(false)
             onActiveFocusChanged: root.cardHasKeyboard()
@@ -1317,8 +1353,8 @@ Item {
           anchors.top: searchBar.bottom
           anchors.left: parent.left
           anchors.right: parent.right
-          height: Style.spacing.hairline
-          color: root.hairline
+          height: root.ruleHeight
+          color: root.selectedBackground
         }
 
         // ── Results ──
@@ -1332,6 +1368,7 @@ Item {
           anchors.rightMargin: root.listInset
           topMargin: root.padding
           bottomMargin: root.padding
+          spacing: root.rowGap
           clip: true
           model: root.rows
           reuseItems: true
@@ -1377,7 +1414,7 @@ Item {
               Item {
                 id: iconSlot
                 anchors.left: parent.left
-                anchors.leftMargin: root.rowPaddingX
+                anchors.leftMargin: root.rowPaddingX - root.iconNudge
                 anchors.verticalCenter: parent.verticalCenter
                 width: root.iconSlotWidth
                 height: width
@@ -1417,9 +1454,9 @@ Item {
               Item {
                 id: labels
                 anchors.left: iconSlot.right
-                anchors.leftMargin: root.rowPaddingX
+                anchors.leftMargin: root.innerGap + root.iconNudge
                 anchors.right: accessories.left
-                anchors.rightMargin: Style.space(12)
+                anchors.rightMargin: root.innerGap
                 anchors.verticalCenter: parent.verticalCenter
                 height: titleText.implicitHeight
 
@@ -1440,9 +1477,9 @@ Item {
 
                 Text {
                   anchors.left: titleText.right
-                  anchors.leftMargin: Style.space(8)
+                  anchors.leftMargin: root.innerGap
                   anchors.baseline: titleText.baseline
-                  width: Math.max(0, labels.width - titleText.width - Style.space(8))
+                  width: Math.max(0, labels.width - titleText.width - root.innerGap)
                   visible: row.current && width > Style.space(24) && text.length > 0
                   textFormat: Text.PlainText
                   text: row.isHeader ? "" : row.modelData.subtitle
@@ -1458,7 +1495,7 @@ Item {
                 anchors.right: parent.right
                 anchors.rightMargin: root.rowPaddingX
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: Style.space(8)
+                spacing: root.innerGap
 
                 Text {
                   visible: !row.isHeader && row.modelData.checked === true

@@ -59,10 +59,18 @@ engine's component cache keeps serving the old one. Restart the shell.
   `rowsInView`).
 - **One padding, one column.** `root.padding` (`supermenu-card-padding`) is the
   band between the border and everything in the card, as the switcher's
-  `switcher-card-padding` is, and `rowRadius` is concentric from it. Inside a
-  row, `rowPaddingX` starts the icon column and ends the chevron; the search
-  text and the back button sit on the same columns as the rows. A new inset
-  should come from these, not a fresh `Style.space()` literal.
+  `switcher-card-padding` is, and `rowRadius` is concentric from it. Between
+  and inside rows the spacing is the switcher's, token for token: `rowGap`
+  (`Style.spacing.xs`) between rows, `rowPaddingX` (`Style.spacing.rowPaddingX`)
+  from a row's edge to its icon column and from the chevron to the far edge,
+  and `innerGap` (`Style.spacing.lg`) between things in a row. The icon slot
+  is the icon itself, and `rowHeight` is the icon plus `innerGap` above and
+  below. The search text and the back button sit on the same columns as the
+  rows. Two exceptions were set by eye: `iconNudge` moves a row's icon two
+  units left of `rowPaddingX` (its name stays put), and `searchTopPadding`, the
+  band above the search field, is two units under `padding`. A new inset should come from these, not a fresh `Style.space()`
+  literal, and a gap between rows has to stay in `rowY()` (which counts one
+  after each row) and the card height (rows at `rowHeight + rowGap`).
 - **The card is sized from the target screen**, not the panel, which only takes
   the screen's size after the compositor configures it. The first rows are laid
   out before that, against a 500px default.
