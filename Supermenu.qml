@@ -1276,7 +1276,8 @@ Item {
             selectionColor: Util.alpha(root.selectedText, 0.35)
             selectedTextColor: root.foreground
             font.family: root.fontFamily
-            // The switcher's app names and the Omarchy launcher's labels.
+            // The Omarchy launcher's labels. The rows below, and the switcher's
+            // names and titles, are a step smaller: itemTextSize (title).
             font.pixelSize: Style.font.heading
 
             onTextChanged: root.rebuildRows(false)
