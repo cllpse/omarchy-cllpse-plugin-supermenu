@@ -63,9 +63,11 @@ engine's component cache keeps serving the old one. Restart the shell.
   and inside rows the spacing is the switcher's, token for token: `rowGap`
   (`Style.spacing.xs`) between rows, `rowPaddingX` (`Style.spacing.rowPaddingX`)
   from a row's edge to its icon column and from the chevron to the far edge,
-  and `innerGap` (`Style.spacing.lg`) between things in a row. The icon slot
-  is the icon itself, and `rowHeight` is the icon plus `innerGap` above and
-  below. The search text and the back button sit on the same columns as the
+  and `innerGap` (`Style.spacing.lg`) between things in a row. Icons are the
+  switcher's: `iconSize` is `Style.font.display`, a glyph draws at it and an
+  app image at `iconDrawn`, 0.9 of it, where a glyph's ink ends. The icon slot
+  is `iconDrawn`, so no margin hides inside it, and `rowHeight` is the slot
+  plus `innerGap` above and below. The search text and the back button sit on the same columns as the
   rows. Two exceptions were set by eye: `iconNudge` moves a row's icon two
   units left of `rowPaddingX` (its name stays put), and `searchTopPadding`, the
   band above the search field, is two units under `padding`. A new inset should come from these, not a fresh `Style.space()`

@@ -1138,30 +1138,36 @@ Item {
   //   innerGap     between things in a row: icon to name, name to context,
   //                text to the accessories, and the search text after the back
   //                button. The switcher's icon-to-name gap, Style.spacing.lg.
-  // The icon slot is the icon itself, so no padding hides inside it, and a row
-  // is the icon with innerGap above and below: 42 at text size 13, against 48
-  // as Style.space(44).
+  // The icon slot is the icon as drawn, so no margin hides inside it: an app
+  // image fills it edge to edge, and a glyph's ink does, its larger em box
+  // centred on it. A row is the slot with innerGap above and below: 56 at text
+  // size 18.
   readonly property int rowGap: Style.spacing.xs
   readonly property int rowPaddingX: Style.spacing.rowPaddingX
   readonly property int innerGap: Style.spacing.lg
-  readonly property int iconSlotWidth: root.iconSize
+  readonly property int iconSlotWidth: root.iconDrawn
   // The icon sits this much left of the row's padding, and the name this much
   // further from it, so only the icon moves (2026-10-11, set by eye): icons
   // draw inside their box with a margin of their own, so on the padding alone
   // they read as further in than the chevron at the other end.
   readonly property int iconNudge: Style.space(2)
-  readonly property int rowHeight: root.iconSize + root.innerGap * 2
+  readonly property int rowHeight: root.iconSlotWidth + root.innerGap * 2
   // A section header is a row like any other, at the item text's size.
   readonly property int headerRowHeight: root.rowHeight
   // The overflow scrims' height, and how far revealSelected() keeps the
   // selected row from either edge so it is never under one: the list's margin
   // plus two-thirds of a row, the window switcher's measure.
   readonly property real scrimHeight: Math.min(list.topMargin + root.rowHeight * 2 / 3, list.height / 2)
-  readonly property int iconSize: Style.space(22)
-  // Glyph icons at the share of the icon box iconLarge had when the box was
-  // 20, so they keep pace with app icons; there is no type token between
-  // iconLarge and display.
-  readonly property int glyphSize: Math.round(root.iconSize * 0.9)
+  // The icon, as the switcher sizes its tiles' (2026-10-17): the display
+  // token, a glyph at the full size and an app image at 0.9 of it. A Nerd Font
+  // glyph's ink is about 0.9 of its em box, so the two draw alike, and alike
+  // in both plugins. The slot above is the 0.9 (2026-10-17): at the full size
+  // an image sat 2px in from each edge of it. It was Style.space(22), off the
+  // type scale, with images at the full box and glyphs at 0.9 of it: glyph ink
+  // about 27 against images at 33 at text size 18, so a glyph row read a size
+  // small.
+  readonly property int iconSize: Style.font.display
+  readonly property int iconDrawn: Math.round(root.iconSize * 0.9)
 
   // The item text's size: the names, their context, section headers.
   readonly property int itemTextSize: Style.font.title
@@ -1283,7 +1289,8 @@ Item {
               text: "󰁍"
               color: root.foreground
               font.family: root.fontFamily
-              font.pixelSize: Style.font.body
+              // The query's size, beside it (2026-10-17). It was body.
+              font.pixelSize: root.itemTextSize
             }
 
             MouseArea {
@@ -1422,8 +1429,8 @@ Item {
                 Image {
                   visible: row.isApp
                   anchors.centerIn: parent
-                  width: root.iconSize
-                  height: root.iconSize
+                  width: root.iconDrawn
+                  height: root.iconDrawn
                   fillMode: Image.PreserveAspectFit
                   // Decoded at physical pixels: a logical-size decode is
                   // upscaled, and blurry, on a scaled output.
@@ -1444,7 +1451,7 @@ Item {
                   // name read as one item. App icons keep their own colours.
                   color: root.foreground
                   font.family: row.modelData.iconFont || root.fontFamily
-                  font.pixelSize: root.glyphSize
+                  font.pixelSize: root.iconSize
                 }
               }
 
@@ -1504,7 +1511,9 @@ Item {
                   text: "✓"
                   color: root.selectedText
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.subtitle
+                  // The item text's size, as the chevron is sized from it
+                  // (2026-10-17). It was subtitle, a step under the name.
+                  font.pixelSize: root.itemTextSize
                 }
 
                 Text {
@@ -1558,7 +1567,9 @@ Item {
             text: input.text ? "No results for “" + input.text + "”" : "Nothing here"
             color: root.muted
             font.family: root.fontFamily
-            font.pixelSize: Style.font.subtitle
+            // The Omarchy menu's, clipboard's and emoji picker's size for this
+            // line (2026-10-17). It was subtitle.
+            font.pixelSize: Style.font.title
           }
         }
 
