@@ -106,84 +106,11 @@ omarchy-shell shell summon cllpse.supermenu '{"query":"theme"}'
 
 ## How results are ordered
 
-Three tiers, strongest first:
-
-1. **The exact name.** Typing a whole name always puts that thing first.
-2. **What you picked for this exact query before**, most-picked first, at most
-   three. A pick is remembered against the query you typed and every shorter
-   prefix of it, weighted by how much of the query that prefix is: picking
-   Tailscale after `tai` teaches `tai` fully, `ta` at two thirds and `t` at one
-   third. A query you habitually stop early on is learned at full weight. One
-   pick claims a one-letter prefix only from a query of three letters or fewer
-   (`tai` gives `t` a third, over the 0.3 bar); from four letters on it is a
-   quarter or less, under it.
-3. **Everything else that matches**, by match quality plus a small usage term.
-   Usage breaks ties and lifts a slightly weaker match. It never lifts the
-   middle of a word over a clean prefix; that gap is what tier 2 closes, for
-   the queries where you showed the order was wrong.
-
-Every count halves every two weeks, so the order follows what you do now, not
-what you did in the spring. Something used daily settles near 20. Fifty uses
-two months ago count for about 2.5: sixty days is a little over four
-half-lives, and it takes exactly four, eight weeks, to leave 3. Each entry is
-one number and one timestamp, with no log of individual uses, and anything
-that fades below 0.05 is dropped when the file is written.
-
-**Matching** is fuzzy on the name: the letters must appear in order, and the
-score rewards what makes a match look intended — word starts, camelCase humps,
-runs of consecutive letters, an early first letter — with fzf's own constants.
-Aliases, an app's generic name and keywords, the row's menu path and its
-description are matched as word prefixes, at a discount; aliases and keywords
-also mid-word from three letters, at a larger one. Space-separated terms
-must each match somewhere, so `lo w` is LibreOffice Writer.
-
-The history lives in `~/.local/state/omarchy/cllpse.supermenu.json`. Delete it
-to start over.
-
-## Where the data comes from
-
-All of it is Omarchy's, read the way the Omarchy menu reads it:
-
-- **Menu entries**: `default/omarchy/omarchy-menu.jsonc` and your
-  `~/.config/omarchy/extensions/omarchy-menu.jsonc`, both watched, parsed and
-  merged by Omarchy's own `MenuModel.js`, which this plugin imports from where
-  Omarchy installs it. `when:` hides a row and `checked:` marks it, evaluated by
-  MenuModel's own batched script. A row under a hidden submenu is hidden too.
-- **Provider rows** (`Style › Font`) come from the same bash one-liners the
-  Omarchy menu runs. They run when their submenu is entered, and once in the
-  background on the first open, so their rows are searchable from the top.
-- **Apps** come from Omarchy's `AppLibrary`: the desktop entries with its hidden
-  entry filters, its icon index, and its launch path with the *Launching…*
-  feedback. Your `~/.icons` drop-ins therefore apply here as they do everywhere
-  else.
-
-## Performance
-
-Measured inside the shell, on a corpus of 313 entries (55 apps):
-
-| | |
-|---|---|
-| keystroke → ranked results | **0.16–0.19 ms** |
-| rebuilding the visible rows | 0.2 ms |
-| rebuilding the index (data changed) | 5–8 ms |
-| `SUPER+SPACE` → card on screen | under 20 ms, including the `hyprctl` that sent it |
-| `SUPER+SPACE` → keystrokes held for the card | ~1 ms after the shortcut reaches the shell |
-| `SUPER+SPACE` → card has the keyboard | 20–35 ms at 120 Hz; what was typed before is replayed |
-
-- **The keybind is a global shortcut**, a Wayland event straight into the shell,
-  not an IPC call that starts a Quickshell process per keypress.
-- **Nothing runs per keystroke but the ranking.** The index is built when the
-  data changes, not when you type. A query that extends the last one only
-  re-scores the last one's survivors.
-- **Opening the card spawns at most one process**: the guard batch (~500 ms of
-  bash here, most of it listing installed packages), in the background, never
-  awaited. The card opens on the last answers and updates in place. It is
-  skipped if the last batch started under ten seconds ago. The first open of a
-  session also runs the provider one-liners and one icon refresh, both in the
-  background.
-
-`omarchy-shell shell call cllpse.supermenu bench ""` reruns the first three
-measurements on your machine; `stats` reports what the index holds.
+An exact name first, then what you picked for this exact query before, then
+fuzzy match quality plus a small usage term. Every count halves every two weeks,
+and the history is one small file you can delete. The rules in full, and where
+the data comes from: [`docs/ranking.md`](docs/ranking.md). Keystroke cost,
+the fast-typing hand-off and an upstream gap: [`docs/internals.md`](docs/internals.md).
 
 ## Theming
 
@@ -202,35 +129,6 @@ less the distance from the card's edge in to the rows (border plus
 
 ## Notes
 
-- **Typing straight after `SUPER+SPACE` lands in the search field.** The card
-  is a layer surface created when it opens, and Hyprland gives it the keyboard
-  only once it is configured, drawn and mapped: 20–35 ms after the shortcut at
-  120 Hz. Until then the window you were in still had focus, so a fast first
-  letter used to go there. Omarchy's own menu opens the same way and still
-  does. Here a 1×1 transparent surface, mapped with no keyboard interest,
-  takes the keyboard ~1 ms after the shortcut arrives, before the card exists.
-  It records what is typed, lets go once the card has the keyboard, and the
-  keys are replayed in order: text, Backspace, arrows, `Enter` and `Esc` alike.
-  It lets go by unmapping, so it cannot keep the keyboard after the card
-  closes, and after half a second no matter what. With a synthetic typist
-  firing eight keys at once, nothing reached the window underneath in any
-  trial.
-- **One gap is upstream.** When the window you leave has an input method
-  active (fcitx5, which Omarchy runs for compose keys, serves terminals,
-  browsers and GTK apps), Hyprland routes keys through fcitx5's keyboard grab
-  until fcitx5 releases it. fcitx5 does that as soon as it reads the
-  deactivate, and any keys already queued for the grab are discarded with it.
-  That is ~5 ms after the shortcut, but up to ~30 ms when fcitx5 happens to be
-  busy (4 of 16 synthetic trials lost keys typed that early). A first letter
-  typed at human speed lands after it.
-- **Omarchy 4.0.4 never hands a third-party menu its app library.**
-  `shell.qml` checks `Array.isArray(manifest.kinds)` on a manifest that has been
-  through the panel loader's model, which turns the array into a sequence wrapper
-  that `Array.isArray` rejects. So the plugin runs its own instance of Omarchy's
-  `AppLibrary`. That costs one icon-index scan (~135 ms) and one hidden-entry
-  scan (~155 ms), in the background at shell start and when apps change. Once
-  the shell's own library arrives the plugin uses it instead, and `stats` shows
-  `sharedAppLibrary: true`.
 - **One overlay at a time.** Opening the card sends
   `custom>>overlay-open>>cllpse.supermenu` on Hyprland's event socket
   (`hl.dsp.event`), and the card closes when another overlay sends the same
@@ -245,6 +143,8 @@ less the distance from the card's edge in to the rows (border plus
 - The plugin runs inside the existing Omarchy shell process. Live edits to its
   files are not always picked up; run `omarchy-restart-shell` after changing
   them.
+- It runs its own `AppLibrary`, because Omarchy 4.0.4 never hands a third-party
+  menu the shell's. See [internals](docs/internals.md).
 
 ## Development
 
