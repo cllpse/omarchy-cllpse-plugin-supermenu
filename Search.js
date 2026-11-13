@@ -253,7 +253,8 @@ function prepareName(text) {
 function words(text) {
   var parts = String(text || "").toLowerCase().split(/[^a-z0-9À-￿]+/)
   var out = []
-  var seen = {}
+  // No prototype, so "constructor" is not already seen.
+  var seen = Object.create(null)
   for (var i = 0; i < parts.length; i++) {
     var part = parts[i]
     if (!part || seen[part]) continue

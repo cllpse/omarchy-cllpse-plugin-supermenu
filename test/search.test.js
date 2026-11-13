@@ -95,6 +95,12 @@ test("aliases and keywords match as word prefixes, and as infixes from three let
   assert.deepStrictEqual(labels(S.search(index([remove, grab]), "co", S.emptyUsage(), "root", NOW)), [])
 })
 
+test("a keyword that is also an Object property is still a word", () => {
+  assert.deepStrictEqual(S.words("Constructor kit, constructor"), ["constructor", "kit"])
+  const builder = candidate("builder", "Builder", { aliases: ["Constructor"] })
+  assert.deepStrictEqual(labels(S.search(index([builder]), "constr", S.emptyUsage(), "root", NOW)), ["Builder"])
+})
+
 test("a search inside a submenu only sees what is under it", () => {
   const inside = candidate("setup.dns", "DNS", { ancestors: "|root|setup|" })
   const outside = candidate("style.dns", "DNS", { ancestors: "|root|style|" })
