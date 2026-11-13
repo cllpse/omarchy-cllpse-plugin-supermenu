@@ -537,7 +537,13 @@ Item {
   // ── Usage history ─────────────────────────────────────────────────────────
   //
   // Next to Omarchy's own state (clipboard-history.json lives here too). Read
-  // once at startup, written half a second after a pick. Never held open.
+  // once at startup, written half a second after a pick or when the card
+  // closes, whichever comes first. Never held open.
+  //
+  // The close matters: a pick that runs an action closes the card first, and
+  // some actions end this process well inside half a second. Update > Process
+  // > Shell, a font and a language all restart the shell, and a pick waiting
+  // on the timer died with it, never recorded.
 
   property string usagePath: Quickshell.env("HOME") + "/.local/state/omarchy/cllpse.supermenu.json"
   property var usage: Search.emptyUsage()
@@ -553,7 +559,12 @@ Item {
   Timer {
     id: saveTimer
     interval: 500
-    onTriggered: usageFile.setText(JSON.stringify(Search.prunedUsage(root.usage, Date.now())) + "\n")
+    onTriggered: root.saveUsage()
+  }
+
+  function saveUsage() {
+    saveTimer.stop()
+    usageFile.setText(JSON.stringify(Search.prunedUsage(root.usage, Date.now())) + "\n")
   }
 
   function recordPick(id) {
@@ -646,6 +657,9 @@ Item {
   }
 
   function dismiss(notifyShell) {
+    // A pick still waiting to be written goes now, before activate() starts
+    // the action that may end this process. See the usage history above.
+    if (saveTimer.running) root.saveUsage()
     root.releaseCatcher()
     root.earlyKeys = []
     root.pendingOpen = null
