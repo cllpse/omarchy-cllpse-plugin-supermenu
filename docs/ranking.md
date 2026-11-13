@@ -28,10 +28,11 @@ that fades below 0.05 is dropped when the file is written.
 **Matching** is fuzzy on the name: the letters must appear in order, and the
 score rewards what makes a match look intended — word starts, camelCase humps,
 runs of consecutive letters, an early first letter — with fzf's own constants.
-Aliases, an app's generic name and keywords, the row's menu path and its
-description are matched as word prefixes, at a discount; aliases and keywords
-also mid-word from three letters, at a larger one. Space-separated terms
-must each match somewhere, so `lo w` is LibreOffice Writer.
+Aliases and Omarchy's search terms, an app's generic name and keywords, the
+row's menu path and its description are matched as word prefixes, at a
+discount; aliases, search terms and keywords also mid-word from three letters,
+at a larger one. Space-separated terms must each match somewhere, so `lo w`
+is LibreOffice Writer.
 
 The history lives in `~/.local/state/omarchy/cllpse.supermenu.json`. Delete it
 to start over.
@@ -48,9 +49,10 @@ All of it is Omarchy's, read the way the Omarchy menu reads it:
   marked and not selectable, but out of search, as the Omarchy menu does; all
   three are evaluated by MenuModel's own batched script. A row under a hidden
   submenu is hidden too.
-- **Provider rows** (`Style › Font`) come from the same bash one-liners the
-  Omarchy menu runs. They run when their submenu is entered, and once in the
-  background on the first open, so their rows are searchable from the top.
+- **Provider rows** (`Appearance › Font`, `Setup › Language`) come from the
+  same bash one-liners the Omarchy menu runs. They run when their submenu is
+  entered, and once in the background on the first open, so their rows are
+  searchable from the top. A language row answers to its English name too.
 - **Apps** come from Omarchy's `AppLibrary`: the desktop entries with its hidden
   entry filters, its icon index, and its launch path with the *Launching…*
   feedback. Your `~/.icons` drop-ins therefore apply here as they do everywhere

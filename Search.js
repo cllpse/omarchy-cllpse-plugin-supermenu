@@ -434,7 +434,10 @@ function buildCandidates(data, menuModel) {
     if (!entry || id === "root" || entry.kind === "app") continue
     if (!reachable(id)) continue
 
-    var aliases = (entry.aliases || []).slice()
+    // Search terms (Omarchy 4.5) are searched as aliases are, as Omarchy's
+    // nameSearchText() does: a language's English name on its provider row,
+    // or any a menu file declares. Unlike aliases, they never route.
+    var aliases = (entry.aliases || []).concat(entry.searchTerms || [])
     aliases.push(menuModel.leafIdFor(id))
     // `disabled:` (Omarchy 4.5) marks software already installed: the row
     // stays in its submenu, dimmed and not selectable, and earns the ✓ that

@@ -305,6 +305,22 @@ test("a disabled row stays in its submenu with a ✓, and out of search", () => 
   assert.deepStrictEqual(S.search(idx, "kitty", S.emptyUsage(), "root", NOW).map((r) => r.candidate.id), ["install.kitty"])
 })
 
+test("a provider row's search terms find it, as its aliases would", () => {
+  // Setup › Language: native names, with the English one as a search term.
+  const merged = MenuModel.mergeMenuSources(MenuModel.parseMenuJsonc(`{
+    "setup": {"label":"Setup"},
+    "setup.language": {"label":"Language","provider":"languages"}
+  }`), [])
+  const swapped = MenuModel.swapProviderRows(merged.items, merged.itemOrder, "setup.language", [{
+    id: "setup.language.da", parent: "setup.language", kind: "action", icon: "", iconFont: "",
+    label: "Dansk", title: "", target: "", description: "", action: "omarchy-language da",
+    provider: "", aliases: [], searchTerms: ["Danish"], when: "", checked: "", disabled: "", order: 0
+  }])
+  const idx = S.buildCandidates({ items: swapped.items, itemOrder: swapped.itemOrder }, MenuModel)
+  assert.deepStrictEqual(labels(S.search(idx, "danish", S.emptyUsage(), "root", NOW)), ["Dansk"])
+  assert.deepStrictEqual(labels(S.search(idx, "dansk", S.emptyUsage(), "root", NOW)), ["Dansk"])
+})
+
 test("apps are found by their generic name and keywords", () => {
   const idx = S.buildCandidates(syntheticData(), MenuModel)
   assert.deepStrictEqual(labels(S.search(idx, "term", S.emptyUsage(), "root", NOW)).sort(), ["Alacritty", "Ghostty"])

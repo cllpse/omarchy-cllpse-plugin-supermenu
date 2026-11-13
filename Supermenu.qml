@@ -179,8 +179,8 @@ Item {
     root.menuPending = false
     var merged = MenuModel.mergeMenuSources(root.defaultMenuItems, root.userMenuItems)
     // A fresh merge has no provider rows in it, so run the providers again on
-    // the next open, or Style > Font's rows would drop out of the search until
-    // that submenu is visited.
+    // the next open, or Appearance > Font's rows would drop out of the search
+    // until that submenu is visited.
     root.providerRevision += 1
     root.providersLoaded = ({})
     root.providerQueue = []
@@ -288,10 +288,12 @@ Item {
   // ── Providers ─────────────────────────────────────────────────────────────
   //
   // A submenu with `provider:` gets its rows from a bash one-liner at run time
-  // (Style > Font lists the installed fonts). These two specs are copied from
+  // (Appearance > Font lists the installed fonts). These specs are copied from
   // the Omarchy menu (plugins/menu/Menu.qml) because they live inline there,
-  // with no module to import them from. The rows are merged by Omarchy's own
-  // swapProviderRows(). `apps` is not here: the apps come from appLibrary.
+  // with no module to import them from, all but power-profiles' labelFor(),
+  // which translates its labels: this plugin shows Omarchy's English labels.
+  // The rows are merged by Omarchy's own swapProviderRows(). `apps` is not
+  // here: the apps come from appLibrary.
   //
   // A provider runs when its submenu is entered (a volatile one again on every
   // entry), and every provider runs once in the background on the first open,
@@ -308,6 +310,22 @@ Item {
       script: "current=$(powerprofilesctl get 2>/dev/null); omarchy-powerprofiles-list 2>/dev/null | while read -r p; do [[ -z $p ]] && continue; printf '%s\\t%s\\t%s\\n' \"$p\" \"$p\" \"$current\"; done",
       icon: "󰐋",
       actionFor: function(value) { return "omarchy-powerprofiles-set autodetect " + Util.shellQuote(value) }
+    },
+    // Kernel names are package names, the same in every language.
+    "kernels": {
+      script: "current=$(omarchy-kernel get 2>/dev/null); omarchy-kernel list 2>/dev/null | while read -r k; do [[ -z $k ]] && continue; printf '%s\\t%s\\t%s\\n' \"$k\" \"$k\" \"$current\"; done",
+      icon: "",
+      volatile: true,
+      actionFor: function(value) { return "omarchy-kernel set " + Util.shellQuote(value) }
+    },
+    // Rows carry a fourth field (the English name) so searching "danish"
+    // finds the row labeled with its native name; mergeProviderRows turns
+    // it into a search term.
+    "languages": {
+      script: "current=$(omarchy-language 2>/dev/null); omarchy-language list 2>/dev/null | while IFS=$'\\t' read -r name code english; do [[ -z $code ]] && continue; printf '%s\\t%s\\t%s\\t%s\\n' \"$name\" \"$code\" \"$current\" \"$english\"; done",
+      icon: "",
+      volatile: true,
+      actionFor: function(value) { return "omarchy-language " + Util.shellQuote(value) }
     }
   })
 
@@ -382,11 +400,16 @@ Item {
       var rowId = menuId + "." + MenuModel.slugify(value)
       while (takenIds[rowId]) rowId += "-"
       takenIds[rowId] = true
+      // A fourth field is a search term (a language's English name), never
+      // an alias: Omarchy routes `summon` by aliases, and a row's English
+      // name should not become a command that sets the language.
       providerRows.push({
         id: rowId, parent: menuId, kind: "action",
         icon: value === current ? "✓" : (spec.icon || ""),
         iconFont: "", label: label, title: "", target: "", description: "",
-        action: spec.actionFor(value), provider: "", aliases: [], when: "", checked: "", order: 0
+        action: spec.actionFor(value), provider: "", aliases: [],
+        searchTerms: parts[3] ? [parts[3]] : [],
+        when: "", checked: "", disabled: "", order: 0
       })
     }
     var merged = MenuModel.swapProviderRows(root.items, root.itemOrder, menuId, providerRows)

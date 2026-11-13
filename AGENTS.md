@@ -42,12 +42,14 @@ engine's component cache keeps serving the old one. Restart the shell.
   and comparing each step with a fresh search; extend its query list when you
   add a rule.
 - **Omarchy's data, Omarchy's functions.** Parsing, merging, guards, visibility
-  and paths go through `MenuModel.js`. The two provider specs (`fonts`,
-  `power-profiles`) are copied from `plugins/menu/Menu.qml` because they live
-  inline there. Check them for drift on an Omarchy update:
+  and paths go through `MenuModel.js`. The provider specs (`fonts`,
+  `power-profiles`, `kernels`, `languages`) are copied from
+  `plugins/menu/Menu.qml` because they live inline there, all but
+  power-profiles' `labelFor`, a translation this plugin does not apply. Check
+  them for drift, and for a new provider, on an Omarchy update:
 
   ```bash
-  grep -A4 '"fonts": {\|"power-profiles": {' /usr/share/omarchy/shell/plugins/menu/Menu.qml
+  sed -n '/readonly property var providers/,/^  })/p' /usr/share/omarchy/shell/plugins/menu/Menu.qml
   ```
 
 - **Rows are positioned by arithmetic, not `positionViewAtIndex()`.** Every row,
