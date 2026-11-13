@@ -242,6 +242,21 @@ Item {
     root.evaluateGuards()
   }
 
+  // Whether two batches' answers agree, row for row. Omarchy 4.5 runs the
+  // guards in parallel groups, so lines arrive, and keys are inserted, in a
+  // different order every batch: compared as JSON.stringify output, every
+  // batch read as a change, rebuilt the index and reset the list under
+  // whatever was being typed.
+  function sameAnswers(next, last) {
+    var count = 0
+    for (var id in next) {
+      if (next[id] !== last[id]) return false
+      count++
+    }
+    for (var other in last) count--
+    return count === 0
+  }
+
   Process {
     id: guardProc
     property string collected: ""
@@ -274,9 +289,9 @@ Item {
         else if (tag === "d") nextDisabled[rest.substring(0, tagAt)] = value
       }
 
-      var changed = JSON.stringify(nextWhen) !== JSON.stringify(root.whenResults)
-        || JSON.stringify(nextChecked) !== JSON.stringify(root.checkedResults)
-        || JSON.stringify(nextDisabled) !== JSON.stringify(root.disabledResults)
+      var changed = !root.sameAnswers(nextWhen, root.whenResults)
+        || !root.sameAnswers(nextChecked, root.checkedResults)
+        || !root.sameAnswers(nextDisabled, root.disabledResults)
       root.whenResults = nextWhen
       root.checkedResults = nextChecked
       root.disabledResults = nextDisabled
