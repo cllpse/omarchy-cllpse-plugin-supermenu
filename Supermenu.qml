@@ -206,15 +206,16 @@ Item {
   //
   // `when:` hides a row, `checked:` marks it and `disabled:` dims it (software
   // already installed), and all three are bash. Omarchy's guardScript()
-  // batches all of them into one script -- ~500ms on this machine, most of it
-  // listing installed packages -- and the open path never waits on it: the
-  // card opens on the last answers and updates in place when the new ones
-  // land, exactly as the Omarchy menu does.
+  // batches all of them into one script -- ~140 ms on this machine, its
+  // package list cached and its guards run side by side (Omarchy 4.5; it was
+  // ~500 ms) -- and the open path never waits on it: the card opens on the
+  // last answers and updates in place when the new ones land, exactly as the
+  // Omarchy menu does.
   //
   // Unlike the Omarchy menu, an open within guardRefreshMs of the last run
   // does not start another. What a guard asks -- is this installed, which
   // browser is the default -- does not change between two opens a few seconds
-  // apart, and a burst of opens would otherwise queue a burst of package scans.
+  // apart, and a burst of opens would otherwise queue a burst of batches.
 
   readonly property int guardRefreshMs: 10000
   property var whenResults: ({})

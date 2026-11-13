@@ -152,8 +152,12 @@ less the distance from the card's edge in to the rows (border plus
 
 ```bash
 node test/search.test.js   # the ranking rules, plus a check against your own menu
-node test/bench.js         # per-keystroke cost under node (a floor; use `bench` above)
+node test/bench.js         # per-keystroke cost under node (a floor)
 ```
+
+The figure that counts is the shell's own, measured in its engine:
+`omarchy-shell shell call cllpse.supermenu bench ""`
+([internals](docs/internals.md)).
 
 Everything that decides the order is in [`Search.js`](Search.js), which is plain
 JavaScript and runs under node unchanged. [`Supermenu.qml`](Supermenu.qml)

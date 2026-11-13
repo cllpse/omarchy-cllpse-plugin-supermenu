@@ -2,7 +2,9 @@
 
 Part of the [Supermenu](../README.md).
 
-Measured inside the shell, on a corpus of 313 entries (55 apps):
+Measured inside the shell in October 2026, on Omarchy 4.0.4's corpus of 313
+entries (55 apps). On 4.5 the index here holds 455 (68 apps); `bench`, below,
+reruns the first three on yours:
 
 | | |
 |---|---|
@@ -18,12 +20,12 @@ Measured inside the shell, on a corpus of 313 entries (55 apps):
 - **Nothing runs per keystroke but the ranking.** The index is built when the
   data changes, not when you type. A query that extends the last one only
   re-scores the last one's survivors.
-- **Opening the card spawns at most one process**: the guard batch (~500 ms of
-  bash here, most of it listing installed packages), in the background, never
-  awaited. The card opens on the last answers and updates in place. It is
-  skipped if the last batch started under ten seconds ago. The first open of a
-  session also runs the provider one-liners and one icon refresh, both in the
-  background.
+- **Opening the card spawns at most one process**: the guard batch (~140 ms of
+  bash here on Omarchy 4.5, which caches the package list and runs the guards
+  side by side; ~500 ms before), in the background, never awaited. The card
+  opens on the last answers and updates in place. It is skipped if the last
+  batch started under ten seconds ago. The first open of a session also runs
+  the provider one-liners and one icon refresh, both in the background.
 
 `omarchy-shell shell call cllpse.supermenu bench ""` reruns the first three
 measurements on your machine; `stats` reports what the index holds.

@@ -183,10 +183,13 @@ function round3(value) {
 // letter by letter, and "sc" ranks Screenshot (a prefix) over Tailscale (the
 // middle of a word) -- with no special cases for any of them.
 //
-// Aliases and keywords, the parent menu's path and the description are matched
-// as word prefixes only, at a discount. Fuzzy matching across a list of
-// keywords finds letters scattered over unrelated words, so it would match
-// nearly anything and mean nothing.
+// Aliases, search terms and keywords, the parent menu's path and the
+// description are matched word by word, never fuzzily, at a discount: as word
+// prefixes (WEIGHT_ALIAS_PREFIX, WEIGHT_PATH, WEIGHT_DESCRIPTION), and
+// aliases, search terms and keywords also mid-word once a term has three
+// letters (WEIGHT_ALIAS_INFIX), so "rec" finds "screenrecording". Fuzzy
+// matching across a list of keywords finds letters scattered over unrelated
+// words, so it would match nearly anything and mean nothing.
 
 var SCORE_MATCH = 16
 var BONUS_BOUNDARY = 8
@@ -481,8 +484,11 @@ function buildCandidates(data, menuModel) {
     }))
   }
 
-  // Apps live under Omarchy's "apps" submenu, with the "apps.<desktop id>" ids
-  // its own app rows use, and are only reachable while that submenu is.
+  // Apps live under Omarchy's "apps" row, with the "apps.<desktop id>" ids its
+  // own app rows use, and are only reachable while that row is. Since Omarchy
+  // 4.5 the row is an action, the dock's Apps, as in Omarchy's menu, so the
+  // apps are searched but not browsed; a menu file that makes it a submenu
+  // again browses them alphabetically (children()).
   var appsReachable = !items.apps || reachable("apps")
   var appsPath = items.apps ? menuModel.pathFor(items, "apps") : "Apps"
   for (var a = 0; appsReachable && a < apps.length; a++) {
