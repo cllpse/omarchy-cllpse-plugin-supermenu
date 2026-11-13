@@ -65,9 +65,11 @@ test("camelCase humps and digit runs count as word starts", () => {
   const hump = S.matchName("o", S.prepareName("LibreOffice"), false)
   const flat = S.matchName("o", S.prepareName("Libreoffice"), false)
   assert.ok(hump > flat)
+  // The 5 that starts a run of digits against one inside a run. (This took
+  // F5citx, whose 5 starts a run too: 23 against 23, which could not fail.)
   const digits = S.matchName("5", S.prepareName("Fcitx5"), false)
-  const inside = S.matchName("5", S.prepareName("F5citx"), false)
-  assert.ok(digits >= inside)
+  const inside = S.matchName("5", S.prepareName("Fcitx15"), false)
+  assert.ok(digits > inside, digits + " > " + inside)
 })
 
 test("initials find multi-word names", () => {
