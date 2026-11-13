@@ -600,14 +600,17 @@ Item {
     }
     if (entry && entry.kind === "link" && entry.target) id = entry.target
 
-    root.targetScreen = root.focusedScreen()
     var menu = root.items[id] && id !== "root" ? id : "root"
     var text = String(query || "")
-    // Already up, the card has the keyboard and there is nothing to catch.
+    // Already up, the card has the keyboard and there is nothing to catch. It
+    // stays on its screen too: targetScreen is resolved only while the card
+    // is unmapped (see there), and a summon while it was open (the shell
+    // hands an open plugin every summon) resolved it again and moved it.
     if (root.opened) {
       root.openCard(menu, text)
       return
     }
+    root.targetScreen = root.focusedScreen()
     // The catcher goes first and on its own. Its keyboard request leaves with
     // its next frame, drawn once this returns to the event loop; building the
     // card in the same turn put the card's first frame ahead of it (25 ms
