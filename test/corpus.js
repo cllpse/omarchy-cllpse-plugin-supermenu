@@ -1,7 +1,7 @@
 // This machine's real search corpus, assembled the way Supermenu.qml does it:
 // Omarchy's menu JSONC parsed and merged by Omarchy's own MenuModel.js, its
-// `when:` / `checked:` guards run through MenuModel's own batched script, and
-// the visible .desktop applications.
+// `when:` / `checked:` / `disabled:` guards run through MenuModel's own batched
+// script, and the visible .desktop applications.
 //
 // The app list is an approximation of Quickshell's DesktopEntries: the same
 // files and the same NoDisplay/Hidden rules, without Omarchy's launcher.hides
@@ -28,15 +28,15 @@ function runGuards(items) {
   const script = MenuModel.guardScript(items)
   const whenResults = {}
   const checkedResults = {}
-  if (!script) return { whenResults, checkedResults }
+  const disabledResults = {}
+  if (!script) return { whenResults, checkedResults, disabledResults }
   const out = execFileSync("bash", ["-lc", script], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
+  const byTag = { w: whenResults, c: checkedResults, d: disabledResults }
   for (const line of out.split("\n")) {
-    const m = /^(.*):([wc]):([01])$/.exec(line.trim())
-    if (!m) continue
-    if (m[2] === "w") whenResults[m[1]] = m[3] === "1"
-    else checkedResults[m[1]] = m[3] === "1"
+    const m = /^(.*):([wcd]):([01])$/.exec(line.trim())
+    if (m) byTag[m[2]][m[1]] = m[3] === "1"
   }
-  return { whenResults, checkedResults }
+  return { whenResults, checkedResults, disabledResults }
 }
 
 function desktopDirs() {
@@ -90,13 +90,14 @@ function readApps() {
 function load(options) {
   const opts = options || {}
   const menu = readMenu()
-  const guards = opts.guards === false ? { whenResults: {}, checkedResults: {} } : runGuards(menu.items)
+  const guards = opts.guards === false ? { whenResults: {}, checkedResults: {}, disabledResults: {} } : runGuards(menu.items)
   const apps = readApps()
   const data = {
     items: menu.items,
     itemOrder: menu.itemOrder,
     whenResults: guards.whenResults,
     checkedResults: guards.checkedResults,
+    disabledResults: guards.disabledResults,
     apps
   }
   return { data, index: Search.buildCandidates(data, MenuModel), MenuModel }

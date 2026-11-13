@@ -381,8 +381,8 @@ function matchCandidate(terms, candidate) {
 // One flat list of everything searchable, built from Omarchy's own data each
 // time that data changes -- never per keystroke. `menuModel` is Omarchy's
 // MenuModel.js, passed in rather than imported so this file stays plain JS:
-// visibility, ✓ labels and parent paths all come from Omarchy's functions, so
-// the supermenu shows exactly what the Omarchy menu would.
+// visibility, ✓ labels, disabled rows and parent paths all come from Omarchy's
+// functions, so the supermenu shows exactly what the Omarchy menu would.
 //
 // `apps` are plain objects { appId, name, genericName, keywords, icon }, the
 // same fields the Omarchy menu reads off its DesktopEntry rows.
@@ -392,6 +392,7 @@ function buildCandidates(data, menuModel) {
   var itemOrder = data.itemOrder || []
   var whenResults = data.whenResults || {}
   var checkedResults = data.checkedResults || {}
+  var disabledResults = data.disabledResults || {}
   var apps = data.apps || []
 
   // Omarchy's isVisible() answers for one row: its own `when:`, and for a
@@ -435,11 +436,17 @@ function buildCandidates(data, menuModel) {
 
     var aliases = (entry.aliases || []).slice()
     aliases.push(menuModel.leafIdFor(id))
+    // `disabled:` (Omarchy 4.5) marks software already installed: the row
+    // stays in its submenu, dimmed and not selectable, and earns the ✓ that
+    // Omarchy's labelFor() gives it. Only asked of a row that declares one,
+    // so an Omarchy without isDisabled() never reaches the call.
+    var disabled = !!entry.disabled && menuModel.isDisabled(disabledResults, entry)
     list.push(makeCandidate({
       id: id,
       kind: entry.kind,
       label: entry.label,
-      checked: !!(entry.checked && checkedResults[id]),
+      checked: !!(entry.checked && checkedResults[id]) || disabled,
+      disabled: disabled,
       subtitle: menuModel.parentPathFor(items, id),
       icon: entry.icon || "",
       iconFont: entry.iconFont || "",
@@ -474,6 +481,7 @@ function buildCandidates(data, menuModel) {
       kind: "app",
       label: app.name,
       checked: false,
+      disabled: false,
       subtitle: "",
       icon: "",
       iconFont: "",
@@ -505,14 +513,21 @@ function makeCandidate(spec) {
   return spec
 }
 
-function makeIndex(list) {
+// Every candidate is browsable under its parent; only those that can be run
+// are searched. A disabled row earns its place in the submenu it belongs to,
+// where the list around it is the point, but search is a list of what you can
+// do, so Omarchy's own menu leaves it out there, and so does this.
+function makeIndex(candidates) {
+  var list = []
   var byId = {}
   var children = {}
-  for (var i = 0; i < list.length; i++) {
-    byId[list[i].id] = list[i]
-    var parent = list[i].parent
+  for (var i = 0; i < candidates.length; i++) {
+    var candidate = candidates[i]
+    byId[candidate.id] = candidate
+    var parent = candidate.parent
     if (!children[parent]) children[parent] = []
-    children[parent].push(list[i])
+    children[parent].push(candidate)
+    if (!candidate.disabled) list.push(candidate)
   }
   return { list: list, byId: byId, children: children }
 }

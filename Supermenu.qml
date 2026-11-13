@@ -194,11 +194,12 @@ Item {
 
   // ── Guards ────────────────────────────────────────────────────────────────
   //
-  // `when:` hides a row and `checked:` marks it, and both are bash. Omarchy's
-  // guardScript() batches all of them into one script -- ~500ms on this
-  // machine, most of it listing installed packages -- and the open path never
-  // waits on it: the card opens on the last answers and updates in place when
-  // the new ones land, exactly as the Omarchy menu does.
+  // `when:` hides a row, `checked:` marks it and `disabled:` dims it (software
+  // already installed), and all three are bash. Omarchy's guardScript()
+  // batches all of them into one script -- ~500ms on this machine, most of it
+  // listing installed packages -- and the open path never waits on it: the
+  // card opens on the last answers and updates in place when the new ones
+  // land, exactly as the Omarchy menu does.
   //
   // Unlike the Omarchy menu, an open within guardRefreshMs of the last run
   // does not start another. What a guard asks -- is this installed, which
@@ -208,6 +209,7 @@ Item {
   readonly property int guardRefreshMs: 10000
   property var whenResults: ({})
   property var checkedResults: ({})
+  property var disabledResults: ({})
   property bool guardsPending: false
   property real guardsStartedAt: 0
 
@@ -224,6 +226,7 @@ Item {
     if (!script) {
       root.whenResults = ({})
       root.checkedResults = ({})
+      root.disabledResults = ({})
       root.scheduleIndex()
       return
     }
@@ -255,6 +258,7 @@ Item {
 
       var nextWhen = ({})
       var nextChecked = ({})
+      var nextDisabled = ({})
       var lines = guardProc.collected.split("\n")
       for (var i = 0; i < lines.length; i++) {
         var line = lines[i].trim()
@@ -267,12 +271,15 @@ Item {
         var tag = rest.substring(tagAt + 1)
         if (tag === "w") nextWhen[rest.substring(0, tagAt)] = value
         else if (tag === "c") nextChecked[rest.substring(0, tagAt)] = value
+        else if (tag === "d") nextDisabled[rest.substring(0, tagAt)] = value
       }
 
       var changed = JSON.stringify(nextWhen) !== JSON.stringify(root.whenResults)
         || JSON.stringify(nextChecked) !== JSON.stringify(root.checkedResults)
+        || JSON.stringify(nextDisabled) !== JSON.stringify(root.disabledResults)
       root.whenResults = nextWhen
       root.checkedResults = nextChecked
+      root.disabledResults = nextDisabled
       if (changed) root.scheduleIndex()
       if (root.guardsPending) Qt.callLater(root.evaluateGuards)
     }
@@ -462,6 +469,7 @@ Item {
       itemOrder: root.itemOrder,
       whenResults: root.whenResults,
       checkedResults: root.checkedResults,
+      disabledResults: root.disabledResults,
       apps: root.apps
     }, root.menuModelApi())
     if (root.opened) root.rebuildRows(true)
@@ -471,6 +479,7 @@ Item {
   function menuModelApi() {
     return {
       isVisible: function(items, order, when, entry) { return MenuModel.isVisible(items, order, when, entry) },
+      isDisabled: function(results, entry) { return MenuModel.isDisabled(results, entry) },
       leafIdFor: function(id) { return MenuModel.leafIdFor(id) },
       parentPathFor: function(items, id) { return MenuModel.parentPathFor(items, id) },
       pathFor: function(items, id) { return MenuModel.pathFor(items, id) }
@@ -690,7 +699,8 @@ Item {
       appId: candidate.appId,
       action: candidate.action,
       target: candidate.target,
-      checked: candidate.checked
+      checked: candidate.checked,
+      disabled: !!candidate.disabled
     }
   }
 
@@ -714,9 +724,11 @@ Item {
       for (i = 0; i < own.length; i++) next.push(root.itemRow(own[i], base))
     }
 
+    // The cursor never rests on a disabled row: a submenu whose every row is
+    // disabled (everything in it installed) shows none, as Omarchy's does.
     var nextSelected = -1
     for (i = 0; i < next.length; i++) {
-      if (next[i].type !== "item") continue
+      if (next[i].type !== "item" || next[i].disabled) continue
       if (nextSelected < 0) nextSelected = i
       if (keepId && next[i].id === keepId) { nextSelected = i; break }
     }
@@ -727,8 +739,8 @@ Item {
     root.revealSelected()
   }
 
-  // Moves the cursor over item rows only, stopping at either end the way
-  // Raycast does rather than wrapping.
+  // Moves the cursor over item rows only, stepping over disabled ones, and
+  // stopping at either end the way Raycast does rather than wrapping.
   function move(delta) {
     if (root.selected < 0) return
     var step = delta > 0 ? 1 : -1
@@ -736,7 +748,7 @@ Item {
     var at = root.selected
     var i = at + step
     while (remaining > 0 && i >= 0 && i < root.rows.length) {
-      if (root.rows[i].type === "item") {
+      if (root.rows[i].type === "item" && !root.rows[i].disabled) {
         at = i
         remaining--
       }
@@ -780,7 +792,7 @@ Item {
 
   function activate(at) {
     var row = at >= 0 && at < root.rows.length ? root.rows[at] : null
-    if (!row || row.type !== "item") return
+    if (!row || row.type !== "item" || row.disabled) return
     root.recordPick(row.id)
 
     if (row.kind === "menu" || row.kind === "link") {
@@ -988,6 +1000,8 @@ Item {
     for (var i = 0; i < entries.length; i++) byKind[entries[i].kind] = (byKind[entries[i].kind] || 0) + 1
     var hidden = 0
     for (var id in root.whenResults) if (root.whenResults[id] === false) hidden++
+    var disabledRows = 0
+    for (var d in root.disabledResults) if (root.disabledResults[d] === true) disabledRows++
     return JSON.stringify({
       opened: root.opened,
       // True once the compositor has handed the card the keyboard, which is
@@ -1013,6 +1027,8 @@ Item {
       sharedAppLibrary: !!root.sharedAppLibrary,
       libraryEntries: root.appLibrary ? root.appLibrary.sortedEntries("").length : -1,
       hiddenByWhen: hidden,
+      // Listed in their submenus, dimmed, and never searched.
+      disabledRows: disabledRows,
       guardsRunning: guardProc.running,
       usageItems: Object.keys(root.usage.items || {}).length,
       usageQueries: Object.keys(root.usage.queries || {}).length
@@ -1048,7 +1064,7 @@ Item {
     for (var b = 0; b < 10; b++) {
       Search.buildCandidates({
         items: root.items, itemOrder: root.itemOrder, whenResults: root.whenResults,
-        checkedResults: root.checkedResults, apps: root.apps
+        checkedResults: root.checkedResults, disabledResults: root.disabledResults, apps: root.apps
       }, root.menuModelApi())
     }
     var buildMs = (Date.now() - buildStarted) / 10
@@ -1391,6 +1407,7 @@ Item {
             readonly property bool current: !row.isHeader && row.index === root.selected
             readonly property bool isApp: row.modelData.kind === "app"
             readonly property bool isMenu: row.modelData.kind === "menu" || row.modelData.kind === "link"
+            readonly property bool isDisabled: row.modelData.disabled === true
 
             width: ListView.view.width
             height: row.isHeader ? root.headerRowHeight : root.rowHeight
@@ -1414,6 +1431,10 @@ Item {
             BorderSurface {
               visible: !row.isHeader
               anchors.fill: parent
+              // A disabled row (software already installed) fades as the
+              // Omarchy menu fades it (Menu.qml's row opacity): it is there
+              // to say the thing is installed, not to be picked.
+              opacity: row.isDisabled ? 0.4 : 1
               radius: root.rowRadius
               color: row.current ? root.selectedBackground : "transparent"
               borderSpec: row.current ? root.selectedBorderSpec : Border.none()
@@ -1530,9 +1551,11 @@ Item {
               }
             }
 
+            // Off for a disabled row too: hovering it selects nothing, and a
+            // click on it lands on the card, which swallows it.
             MouseArea {
               id: rowMouse
-              enabled: !row.isHeader
+              enabled: !row.isHeader && !row.isDisabled
               anchors.fill: parent
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor

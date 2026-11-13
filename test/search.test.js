@@ -283,6 +283,28 @@ test("browsing lists a submenu's own rows, the apps alphabetically", () => {
   assert.deepStrictEqual(S.children(idx, "apps").map((c) => c.label), ["Alacritty", "Ghostty"])
 })
 
+test("a disabled row stays in its submenu with a ✓, and out of search", () => {
+  // Omarchy 4.5's Install rows: `disabled:` is true once the software is in.
+  const merged = MenuModel.mergeMenuSources(MenuModel.parseMenuJsonc(`{
+    "install": {"label":"Install"},
+    "install.ghostty": {"label":"Ghostty","disabled":"omarchy-pkg-present ghostty","action":"x"},
+    "install.kitty": {"label":"Kitty","disabled":"omarchy-pkg-present kitty","action":"x"}
+  }`), [])
+  const idx = S.buildCandidates({
+    items: merged.items,
+    itemOrder: merged.itemOrder,
+    disabledResults: { "install.ghostty": true, "install.kitty": false },
+    apps: [{ appId: "com.mitchellh.ghostty", name: "Ghostty", genericName: "Terminal", keywords: [], icon: "ghostty" }]
+  }, MenuModel)
+  assert.deepStrictEqual(S.children(idx, "install").map((c) => [c.label, c.disabled, c.checked]),
+    [["Ghostty", true, true], ["Kitty", false, false]])
+  // The installed app answers its name; its installer never does.
+  assert.deepStrictEqual(S.search(idx, "ghostty", S.emptyUsage(), "root", NOW).map((r) => r.candidate.id),
+    ["apps.com.mitchellh.ghostty"])
+  assert.deepStrictEqual(S.search(idx, "ghostty", S.emptyUsage(), "install", NOW), [])
+  assert.deepStrictEqual(S.search(idx, "kitty", S.emptyUsage(), "root", NOW).map((r) => r.candidate.id), ["install.kitty"])
+})
+
 test("apps are found by their generic name and keywords", () => {
   const idx = S.buildCandidates(syntheticData(), MenuModel)
   assert.deepStrictEqual(labels(S.search(idx, "term", S.emptyUsage(), "root", NOW)).sort(), ["Alacritty", "Ghostty"])

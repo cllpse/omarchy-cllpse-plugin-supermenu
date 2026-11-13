@@ -43,8 +43,11 @@ All of it is Omarchy's, read the way the Omarchy menu reads it:
 - **Menu entries**: `default/omarchy/omarchy-menu.jsonc` and your
   `~/.config/omarchy/extensions/omarchy-menu.jsonc`, both watched, parsed and
   merged by Omarchy's own `MenuModel.js`, which this plugin imports from where
-  Omarchy installs it. `when:` hides a row and `checked:` marks it, evaluated by
-  MenuModel's own batched script. A row under a hidden submenu is hidden too.
+  Omarchy installs it. `when:` hides a row, `checked:` marks it, and
+  `disabled:` (software already installed) keeps it in its submenu, dimmed,
+  marked and not selectable, but out of search, as the Omarchy menu does; all
+  three are evaluated by MenuModel's own batched script. A row under a hidden
+  submenu is hidden too.
 - **Provider rows** (`Style › Font`) come from the same bash one-liners the
   Omarchy menu runs. They run when their submenu is entered, and once in the
   background on the first open, so their rows are searchable from the top.

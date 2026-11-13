@@ -20,10 +20,11 @@ what you chose last time comes first.
 - **Fuzzy where it helps.** `lw` finds LibreOffice Writer, `vsc` VSCode,
   `setup dns` the DNS entry under Setup.
 - **Omarchy's data, Omarchy's look.** It reads the same menu files, runs the
-  same `when:` / `checked:` guards and the same app library as the Omarchy menu,
-  and draws itself in the active theme's menu colours. Unlike that menu it
-  leaves the screen behind it undimmed, as Raycast does; `backdrop` in
-  `Supermenu.qml` turns the dimming back on.
+  same `when:` / `checked:` / `disabled:` guards and the same app library as
+  the Omarchy menu, and draws itself in the active theme's menu colours. What
+  you already have is dimmed in Install and left out of search, as there.
+  Unlike that menu it leaves the screen behind it undimmed, as Raycast does;
+  `backdrop` in `Supermenu.qml` turns the dimming back on.
 
 ## Requirements
 
