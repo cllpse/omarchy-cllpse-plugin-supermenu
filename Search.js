@@ -38,10 +38,13 @@ var QUERY_LIMIT = 2000
 var LEARNED_MIN = 0.3
 var LEARNED_MAX = 3
 
-// Tier 3's usage term is USAGE_WEIGHT * ln(1 + usage). Daily use settles near
-// 20, worth ~24 points: enough to win a tie or beat a slightly better match,
-// not enough to lift a mid-word match over a clean prefix. That gap is what
-// the learned tier closes, for the queries where you showed it is wrong.
+// Tier 3's usage term is USAGE_WEIGHT * ln(1 + usage), never more than
+// USAGE_MAX. Weekly use settles near 3.4, worth ~12 points: enough to win a
+// tie or beat a slightly better match. Daily use settles near 20 and would be
+// worth ~24, more than a clean prefix leads the middle of a word by (17 to 24
+// points), so the term stops at USAGE_MAX, under that lead: no amount of use
+// lifts a mid-word match over a clean prefix. That gap is what the learned
+// tier closes, for the queries where you showed it is wrong.
 var USAGE_WEIGHT = 8
 
 var RESULT_LIMIT = 50
@@ -194,6 +197,12 @@ var GAP_START = -3
 var GAP_EXTENSION = -1
 var LEAD_PENALTY = -1
 var LEAD_PENALTY_MAX = -8
+
+// The most tier 3's usage term adds (see USAGE_WEIGHT): the bonuses a name's
+// first letter earns. The same letter in the middle of a word earns neither
+// and pays at least a point of LEAD_PENALTY, so the cap sits a point under
+// the narrowest lead a clean prefix has. Use twice a week or more reaches it.
+var USAGE_MAX = BONUS_BOUNDARY + BONUS_FIRST
 
 var WEIGHT_ALIAS_PREFIX = 0.75
 var WEIGHT_ALIAS_INFIX = 0.5
@@ -607,7 +616,7 @@ function search(index, query, usage, scope, now, limit) {
     row.usage = decayed(items[id], now)
     row.learned = decayed(learnedMap[id], now)
     row.tier = row.candidate.exact === normalized ? 0 : 2
-    row.rank = row.score + USAGE_WEIGHT * Math.log(1 + row.usage)
+    row.rank = row.score + Math.min(USAGE_MAX, USAGE_WEIGHT * Math.log(1 + row.usage))
     if (row.tier === 2 && row.learned >= LEARNED_MIN) learned.push(row)
   }
   learned.sort(function(a, b) { return b.learned - a.learned })

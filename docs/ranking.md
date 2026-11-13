@@ -14,9 +14,10 @@ Three tiers, strongest first:
    (`tai` gives `t` a third, over the 0.3 bar); from four letters on it is a
    quarter or less, under it.
 3. **Everything else that matches**, by match quality plus a small usage term.
-   Usage breaks ties and lifts a slightly weaker match. It never lifts the
-   middle of a word over a clean prefix; that gap is what tier 2 closes, for
-   the queries where you showed the order was wrong.
+   Usage breaks ties and lifts a slightly weaker match. It is capped a point
+   short of what a clean prefix leads the middle of a word by, so however
+   often you use something it never lifts the one over the other; that gap is
+   what tier 2 closes, for the queries where you showed the order was wrong.
 
 Every count halves every two weeks, so the order follows what you do now, not
 what you did in the spring. Something used daily settles near 20. Fifty uses

@@ -207,9 +207,22 @@ test("usage breaks a tie between equal matches", () => {
 test("heavy usage does not lift the middle of a word over a clean prefix", () => {
   const shot = candidate("shot", "Screenshot")
   const tail = candidate("tail", "Tailscale")
-  const usage = S.emptyUsage()
-  for (let day = 0; day < 60; day++) S.recordPick(usage, "tail", "", NOW - day * DAY)
-  assert.deepStrictEqual(labels(S.search(index([shot, tail]), "sc", usage, "root", NOW))[0], "Screenshot")
+  const escape = candidate("escape", "Escape")
+  const idx = index([shot, tail, escape])
+  // Picked in the order time runs, oldest first. Recorded newest first, the
+  // count never decayed between picks and kept the oldest timestamp, so it
+  // came out near 3 instead of daily use's 20, and the test could not fail.
+  const daily = S.emptyUsage()
+  for (let day = 59; day >= 0; day--) S.recordPick(daily, "tail", "", NOW - day * DAY)
+  assert.ok(S.decayed(daily.items.tail, NOW) > 19, "sixty daily picks settle near 20")
+  assert.deepStrictEqual(labels(S.search(idx, "sc", daily, "root", NOW))[0], "Screenshot")
+  // Five a day, and the closest a middle-of-word match comes: one letter in.
+  const heavy = S.emptyUsage()
+  for (let pick = 300; pick > 0; pick--) {
+    S.recordPick(heavy, "tail", "", NOW - pick * DAY / 5)
+    S.recordPick(heavy, "escape", "", NOW - pick * DAY / 5)
+  }
+  assert.deepStrictEqual(labels(S.search(idx, "sc", heavy, "root", NOW))[0], "Screenshot")
 })
 
 test("pruning drops what has faded and keeps the rest", () => {
