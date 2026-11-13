@@ -153,7 +153,7 @@ Item {
     path: root.defaultMenuPath
     watchChanges: true
     printErrors: false
-    onLoaded: { root.defaultMenuItems = MenuModel.parseMenuJsonc(text()); root.scheduleMenu() }
+    onLoaded: { root.defaultMenuItems = root.menuRows(root.defaultMenuItems, text(), true); root.scheduleMenu() }
     onFileChanged: reload()
   }
 
@@ -162,9 +162,19 @@ Item {
     path: root.userMenuPath
     watchChanges: true
     printErrors: false
-    onLoaded: { root.userMenuItems = MenuModel.parseMenuJsonc(text()); root.scheduleMenu() }
+    onLoaded: { root.userMenuItems = root.menuRows(root.userMenuItems, text(), false); root.scheduleMenu() }
     onLoadFailed: { root.userMenuItems = []; root.scheduleMenu() }
     onFileChanged: reload()
+  }
+
+  // An update, a checkout or an editor's save can be read mid-write, and
+  // what that read finds is not a menu: parsed as one it is no rows at all,
+  // and the search went empty until the next write. Omarchy's keepMenuRows()
+  // (4.5) keeps the rows already held instead, as its menu does, and for the
+  // shipped file (required) an empty read too. An Omarchy without it parses.
+  function menuRows(previous, raw, required) {
+    if (typeof MenuModel.keepMenuRows !== "function") return MenuModel.parseMenuJsonc(raw)
+    return MenuModel.keepMenuRows(previous, raw, required)
   }
 
   // Both files land within a frame of each other at startup; merging once for
@@ -566,6 +576,10 @@ Item {
   readonly property var selectedRow: root.selected >= 0 && root.selected < root.rows.length ? root.rows[root.selected] : null
 
   function show(route, query) {
+    // A shell started mid-update may never have read the shipped menu whole,
+    // and nothing writes it again to prompt a read. Omarchy's menu reads it
+    // again on open; so does this. The card updates in place when it lands.
+    if (root.defaultMenuItems.length === 0) defaultMenuFile.reload()
     var id = MenuModel.resolveRoute(root.items, root.itemOrder, route || "root")
     var entry = root.items[id]
     // A route naming an action runs it, as `omarchy menu summon <alias>` does.
