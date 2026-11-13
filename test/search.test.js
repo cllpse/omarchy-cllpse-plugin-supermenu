@@ -267,6 +267,19 @@ test("rows Omarchy hides are not candidates, nor is anything under them", () => 
   assert.ok(ids.indexOf("setup.dns") >= 0)
 })
 
+test("a parent loop in the user's menu file leaves its rows out, not the index", () => {
+  const user = MenuModel.parseMenuJsonc(`{
+    "loop.a": {"label":"Alpha","parent":"loop.b","action":"x"},
+    "loop.b": {"label":"Beta","parent":"loop.a"},
+    "loop.c": {"label":"Gamma","parent":"loop.a","action":"x"}
+  }`)
+  const merged = MenuModel.mergeMenuSources(MenuModel.parseMenuJsonc(menuJsonc), user)
+  const data = Object.assign(syntheticData(), { items: merged.items, itemOrder: merged.itemOrder })
+  const ids = S.buildCandidates(data, MenuModel).list.map((c) => c.id)
+  assert.ok(ids.indexOf("setup.dns") >= 0)
+  assert.deepStrictEqual(ids.filter((id) => id.indexOf("loop.") === 0), [])
+})
+
 test("candidates carry Omarchy's paths, ✓ state and the apps' own ids", () => {
   const idx = S.buildCandidates(syntheticData(), MenuModel)
   assert.strictEqual(idx.byId["setup.dns"].subtitle, "Setup")

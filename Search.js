@@ -407,9 +407,14 @@ function buildCandidates(data, menuModel) {
     visibleMemo[id] = result
     return result
   }
+  // An id is marked unreachable while its own chain is being followed, so a
+  // parent loop typed into the user's menu file ends there instead of
+  // recursing until the stack overflows, on every rebuild. Nothing in a loop
+  // leads back to the root, so unreachable is also the right answer.
   var reachableMemo = { root: true, "": true }
   function reachable(id) {
     if (reachableMemo[id] !== undefined) return reachableMemo[id]
+    reachableMemo[id] = false
     var entry = items[id]
     var result = !!entry && ownVisible(id) && reachable(entry.parent || "")
     reachableMemo[id] = result
