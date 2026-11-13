@@ -50,8 +50,9 @@ hyprctl reload
 ```
 
 That file unbinds Omarchy's `SUPER+SPACE` and binds it to the supermenu. Omarchy's
-menu itself is untouched: `SUPER+ALT+SPACE` still opens its apps list, and every
-script that uses it as a pick-from-a-list prompt still does.
+menu itself is untouched: the bar's Omarchy button and `omarchy menu` still open
+it, and every script that uses it as a pick-from-a-list prompt still does.
+`SUPER+ALT+SPACE` is not that menu on Omarchy 4.5: it opens the dock's Apps.
 
 Optionally append [`hypr/supermenu-looknfeel.lua`](hypr/supermenu-looknfeel.lua)
 to `~/.config/hypr/looknfeel.lua` for a map fade, and to spare the invisible

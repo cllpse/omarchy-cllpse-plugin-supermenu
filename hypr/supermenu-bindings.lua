@@ -17,8 +17,9 @@
 -- If the shell is not running the dispatch is a no-op, as the IPC call would be.
 
 -- Omarchy binds SUPER + SPACE to its own menu; unbind first or both open.
--- Omarchy's menu stays where it is, on SUPER + ALT + SPACE (apps) and for every
--- script that uses it as a picker.
+-- Omarchy's menu stays where it is, on the bar's Omarchy button and `omarchy
+-- menu`, and for every script that uses it as a picker. (SUPER + ALT + SPACE is
+-- the dock's Apps on Omarchy 4.5, not that menu.)
 hl.unbind("SUPER + SPACE")
 o.bind("SUPER + SPACE", "Supermenu", function()
   hl.dispatch(hl.dsp.global("cllpse-supermenu:toggle"))
